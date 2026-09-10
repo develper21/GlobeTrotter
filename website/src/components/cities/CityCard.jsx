@@ -1,9 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, DollarSign, TrendingUp, Plus, Sparkles, Compass } from 'lucide-react';
+import { MapPin, DollarSign, Star, Plus, Sparkles, Compass } from 'lucide-react';
 import './CityCard.css';
 
 export default function CityCard({ city, showAddToTrip = false, onAddToTrip }) {
+  const dailyBudget = city.avgDailyBudget ?? (city.costIndex ? city.costIndex * 35 : 120);
+  const formattedRating = typeof city.popularityScore === 'number'
+    ? (city.popularityScore <= 5 ? `${city.popularityScore.toFixed(1)} / 5` : `${Math.round(city.popularityScore)}%`)
+    : '4.8 / 5';
+
   return (
     <motion.div
       className="city-card glass-card"
@@ -37,15 +42,15 @@ export default function CityCard({ city, showAddToTrip = false, onAddToTrip }) {
           <div className="city-stat-box">
             <DollarSign size={16} className="city-stat-icon" />
             <div>
-              <span className="city-stat-val">${city.avgDailyBudget}/day</span>
+              <span className="city-stat-val">${dailyBudget}/day</span>
               <span className="city-stat-lbl">Daily Cost</span>
             </div>
           </div>
 
           <div className="city-stat-box">
-            <TrendingUp size={16} className="city-stat-icon amber" />
+            <Star size={16} className="city-stat-icon amber" style={{ fill: '#F59E0B', color: '#F59E0B' }} />
             <div>
-              <span className="city-stat-val">{city.popularityScore || 95}%</span>
+              <span className="city-stat-val">{formattedRating}</span>
               <span className="city-stat-lbl">Rating</span>
             </div>
           </div>
