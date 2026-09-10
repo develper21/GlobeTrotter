@@ -16,12 +16,22 @@ import CommunityPage from './pages/community/CommunityPage';
 import CalendarPage from './pages/calendar/CalendarPage';
 import ProfilePage from './pages/profile/ProfilePage';
 import AdminPage from './pages/admin/AdminPage';
+import ActivitiesPage from './pages/activities/ActivitiesPage';
 import LaunchIntro from './components/common/LaunchIntro';
 
 function App() {
-  const [showLaunchIntro, setShowLaunchIntro] = useState(true);
+  const [showLaunchIntro, setShowLaunchIntro] = useState(() => {
+    try {
+      return !sessionStorage.getItem('gt_has_seen_intro');
+    } catch {
+      return false;
+    }
+  });
 
   const completeLaunchIntro = () => {
+    try {
+      sessionStorage.setItem('gt_has_seen_intro', 'true');
+    } catch {}
     setShowLaunchIntro(false);
   };
 
@@ -71,6 +81,7 @@ function App() {
           <Route path="/trips/:id" element={<TripDetailPage />} />
           <Route path="/trips/:id/itinerary" element={<ItineraryPage />} />
           <Route path="/cities" element={<CitiesPage />} />
+          <Route path="/activities" element={<ActivitiesPage />} />
           <Route path="/community" element={<CommunityPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/profile" element={<ProfilePage />} />
