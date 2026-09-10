@@ -26,7 +26,7 @@ export default function Layout() {
       <footer className="app-footer">
         <div className="app-footer-inner container">
           <div className="app-footer-divider" />
-          <p>This platform provied by team dvlper21</p>
+          <p>This platform provided by team dvlper21</p>
         </div>
       </footer>
     </div>
