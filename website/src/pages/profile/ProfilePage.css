@@ -55,7 +55,7 @@
 }
 
 .profile-bio {
-  color: #DEE2E6;
+  color: var(--text-secondary);
   font-size: 0.925rem;
   margin-top: 0.75rem;
   max-width: 600px;
