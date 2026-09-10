@@ -140,3 +140,14 @@ export async function getMeById(userId: number): Promise<SafeUser> {
 
   return toSafeUser(user);
 }
+
+export async function updateProfile(userId: number, input: Partial<RegisterInput>): Promise<SafeUser> {
+  const { password, ...updateData } = input;
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: updateData,
+    include: { preference: true },
+  });
+
+  return toSafeUser(user);
+}
