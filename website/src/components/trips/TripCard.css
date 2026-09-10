@@ -7,6 +7,9 @@
   background: #FFFFFF;
   border: 1px solid var(--border);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .trip-card:hover {
@@ -92,6 +95,9 @@
 
 .trip-content {
   padding: 1.35rem 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .trip-name {
@@ -141,12 +147,14 @@
   gap: 0.5rem;
   padding-top: 0.85rem;
   border-top: 1px solid var(--border);
+  margin-top: auto;
 }
 
 .trip-card-actions {
   display: flex;
   gap: 0.5rem;
   margin-top: 1rem;
+  padding-top: 0.25rem;
 }
 
 .trip-card-actions .btn {
