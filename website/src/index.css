@@ -69,6 +69,9 @@
 html {
   scroll-behavior: smooth;
   color-scheme: light;
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
 }
 
 body {
@@ -79,6 +82,8 @@ body {
   line-height: 1.5;
   min-height: 100vh;
   overflow-x: hidden;
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -394,11 +399,11 @@ select.form-control option {
   letter-spacing: 0.02em;
 }
 
-.badge-cyan { background: rgba(113, 75, 103, 0.1); color: #714B67; border: 1px solid rgba(113, 75, 103, 0.2); }
-.badge-amber { background: rgba(1, 126, 132, 0.1); color: #017E84; border: 1px solid rgba(1, 126, 132, 0.2); }
-.badge-violet { background: rgba(113, 75, 103, 0.1); color: #714B67; border: 1px solid rgba(113, 75, 103, 0.2); }
-.badge-emerald { background: rgba(40, 167, 69, 0.1); color: #28A745; border: 1px solid rgba(40, 167, 69, 0.2); }
-.badge-rose { background: rgba(220, 53, 69, 0.1); color: #DC3545; border: 1px solid rgba(220, 53, 69, 0.2); }
+.badge-cyan { background: #7E5A72; color: #FFFFFF; border: 1px solid #7E5A72; }
+.badge-amber { background: #7E5A72; color: #FFFFFF; border: 1px solid #7E5A72; }
+.badge-violet { background: #7E5A72; color: #FFFFFF; border: 1px solid #7E5A72; }
+.badge-emerald { background: #7E5A72; color: #FFFFFF; border: 1px solid #7E5A72; }
+.badge-rose { background: #7E5A72; color: #FFFFFF; border: 1px solid #7E5A72; }
 
 /* ===== MODAL & OVERLAY ===== */
 .overlay {
