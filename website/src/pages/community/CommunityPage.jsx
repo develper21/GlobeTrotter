@@ -6,10 +6,12 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { SkeletonCard } from '../../components/common/Loader';
 import toast from 'react-hot-toast';
+import useAuthStore from '../../store/authStore';
 import './CommunityPage.css';
 
 export default function CommunityPage() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -35,6 +37,21 @@ export default function CommunityPage() {
   };
 
   useEffect(() => { fetchTrips(); }, [search, page]);
+
+  const handleCloneTrip = async (tripId) => {
+    if (!user) {
+      toast.error('Please login to clone trips');
+      navigate('/login');
+      return;
+    }
+    try {
+      const { data } = await api.post(`/trips/${tripId}/clone`);
+      toast.success('Trip cloned successfully! Check your trips.');
+      navigate(`/trips/${data.data?.trip?.id || data.data?.trip?._id || data.trip?.id}/itinerary`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to clone trip');
+    }
+  };
 
   return (
     <div className="community-page container" style={{ paddingTop: '2.5rem', paddingBottom: '4rem' }}>
@@ -118,12 +135,12 @@ export default function CommunityPage() {
               </div>
 
               <div className="community-card-footer">
-                <span className="comm-action-btn">
+                <button className="comm-action-btn" onClick={(e) => { e.stopPropagation(); post.trip?.id && navigate(`/trips/${post.trip.id}`); }}>
                   <MessageSquare size={14} /> Read Itinerary
-                </span>
-                <span className="comm-action-btn view-link">
-                  View Guide <ArrowRight size={14} />
-                </span>
+                </button>
+                <button className="comm-action-btn clone-btn" onClick={(e) => { e.stopPropagation(); post.trip?.id && handleCloneTrip(post.trip.id); }}>
+                  <Copy size={14} /> Clone Trip
+                </button>
               </div>
             </motion.div>
           ))}
