@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MapPin, Calendar, DollarSign, Globe, Lock, Heart, MessageSquare, Share2, Eye, Sparkles } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, DollarSign, Globe, Lock, Heart, MessageSquare, Share2, Eye, Sparkles, Copy } from 'lucide-react';
 import api from '../../lib/api';
 import useAuthStore from '../../store/authStore';
 import BudgetSummary from '../../components/itinerary/BudgetSummary';
@@ -56,6 +56,25 @@ export default function TripDetailPage() {
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
     toast.success('Itinerary link copied to clipboard!');
+  };
+
+  const handleCloneTrip = async () => {
+    if (!user) {
+      toast.error('Please login to clone trips');
+      navigate('/login');
+      return;
+    }
+    if (isOwner) {
+      toast.error('You cannot clone your own trip');
+      return;
+    }
+    try {
+      const { data } = await api.post(`/trips/${id}/clone`);
+      toast.success('Trip cloned successfully! Check your trips.');
+      navigate(`/trips/${data.data?.trip?.id || data.data?.trip?._id || data.trip?.id}/itinerary`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to clone trip');
+    }
   };
 
   if (loading) return <PageLoader message="Loading trip details..." />;
@@ -114,6 +133,11 @@ export default function TripDetailPage() {
             {isOwner && (
               <button className="btn btn-primary btn-sm" onClick={() => navigate(`/trips/${id}/itinerary`)}>
                 Edit & Build Itinerary
+              </button>
+            )}
+            {trip.isPublic && !isOwner && (
+              <button className="btn btn-accent btn-sm" onClick={handleCloneTrip}>
+                <Copy size={16} /> Clone Trip
               </button>
             )}
             <button className="btn btn-ghost btn-sm" onClick={handleShare}>
