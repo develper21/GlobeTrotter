@@ -11,11 +11,12 @@ import toast from 'react-hot-toast';
 import './Dashboard.css';
 
 const staggerParent = {
-  animate: { transition: { staggerChildren: 0.08 } }
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { staggerChildren: 0.08 } }
 };
 const fadeUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35 } }
 };
 
 export default function DashboardPage() {
@@ -290,8 +291,14 @@ export default function DashboardPage() {
                       <p><MapPin size={14} /> {city.country?.name || city.country}</p>
                       <p className="featured-city-desc">{city.description}</p>
                       <div className="featured-city-meta">
-                        <span className="badge badge-amber">${city.avgDailyBudget}/day</span>
-                        <span className="badge badge-cyan">Popularity {city.popularityScore}%</span>
+                        <span className="badge badge-amber">
+                          ${city.avgDailyBudget ?? (city.costIndex ? city.costIndex * 35 : 120)}/day
+                        </span>
+                        <span className="badge badge-cyan">
+                          {typeof city.popularityScore === 'number' && city.popularityScore <= 5
+                            ? `★ ${city.popularityScore.toFixed(1)} / 5`
+                            : `Popularity ${Math.round(city.popularityScore || 95)}%`}
+                        </span>
                         {city.bestTimeToVisit && <span className="badge badge-emerald">Best: {city.bestTimeToVisit}</span>}
                       </div>
                     </div>
