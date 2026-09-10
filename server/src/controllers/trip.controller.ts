@@ -3,12 +3,22 @@ import * as tripService from '../services/trip.service';
 import { AuthenticatedRequest } from '../types';
 import { UnauthorizedError } from '../errors/AppError';
 import { sendCreated, sendNoContent, sendSuccess } from '../utils/response.util';
+import { uploadToCloudinary } from '../middlewares/upload.middleware';
 
 const userId = (req: AuthenticatedRequest) => { if (!req.user) throw new UnauthorizedError('Not authenticated'); return req.user.id; };
 const id = (req: AuthenticatedRequest, key: string) => Number(req.params[key]);
 const ok = (res: Response, message: string, data: unknown) => sendSuccess(res, { message, data });
 
-export async function createTrip(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { sendCreated(res, { message: 'Trip created successfully', data: await tripService.createTrip(userId(req), req.body) }); } catch (error) { next(error); } }
+export async function createTrip(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    let coverPhotoUrl = req.body.coverPhoto;
+    if (req.file) {
+      const uploadResult: any = await uploadToCloudinary(req.file, 'trips');
+      coverPhotoUrl = uploadResult.secure_url;
+    }
+    sendCreated(res, { message: 'Trip created successfully', data: await tripService.createTrip(userId(req), { ...req.body, coverPhoto: coverPhotoUrl }) });
+  } catch (error) { next(error); }
+}
 export async function listTrips(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { ok(res, 'Trips retrieved successfully', await tripService.listTrips(userId(req), req.query.status as string)); } catch (error) { next(error); } }
 export async function getTrip(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { ok(res, 'Trip retrieved successfully', await tripService.getTrip(userId(req), id(req, 'id'))); } catch (error) { next(error); } }
 export async function updateTrip(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { ok(res, 'Trip updated successfully', await tripService.updateTrip(userId(req), id(req, 'id'), req.body)); } catch (error) { next(error); } }
@@ -29,3 +39,4 @@ export async function updateActivity(req: AuthenticatedRequest, res: Response, n
 export async function deleteActivity(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { await tripService.deleteActivity(userId(req), id(req, 'id')); sendNoContent(res); } catch (error) { next(error); } }
 export async function reorderActivities(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { ok(res, 'Activities reordered successfully', await tripService.reorderActivities(userId(req), req.body.tripDayId, req.body.activityIds)); } catch (error) { next(error); } }
 export async function itinerary(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { ok(res, 'Complete itinerary retrieved successfully', await tripService.itinerary(userId(req), id(req, 'id'))); } catch (error) { next(error); } }
+export async function cloneTrip(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { sendCreated(res, { message: 'Trip cloned successfully', data: await tripService.cloneTrip(userId(req), id(req, 'id')) }); } catch (error) { next(error); } }
