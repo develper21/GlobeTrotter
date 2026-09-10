@@ -188,6 +188,17 @@
   align-items: center;
 }
 
+@media (max-width: 560px) {
+  .notif-dropdown {
+    position: fixed;
+    top: 68px;
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    max-width: none;
+  }
+}
+
 .notif-item-title {
   font-size: 0.875rem;
   font-weight: 600;

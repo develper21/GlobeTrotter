@@ -179,6 +179,153 @@ input, textarea, select {
 .overflow-hidden { overflow: hidden; }
 .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* ===== RESPONSIVE FOUNDATION ===== */
+button, a, input, textarea, select {
+  min-width: 0;
+}
+
+main {
+  min-width: 0;
+}
+
+img, svg, video, canvas {
+  max-width: 100%;
+}
+
+.page-header,
+.page-title-row {
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .container {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .btn {
+    min-height: 42px;
+  }
+
+  .section-header,
+  .profile-content-header {
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .form-row,
+  .form-row-2,
+  .form-row-3,
+  .profile-form-grid {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .app-layout main {
+    padding-bottom: 2rem !important;
+  }
+
+  .page-title,
+  .page-header h1,
+  .section-header h2 {
+    overflow-wrap: anywhere;
+  }
+
+  .btn {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .form-row,
+  .form-row-2,
+  .form-row-3,
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content,
+  .auth-card,
+  .create-trip-form,
+  .profile-content,
+  .settings-section,
+  .detail-section,
+  .admin-chart-card,
+  .admin-users-table {
+    padding: 1.25rem;
+  }
+
+  .calendar-container {
+    padding: 0.75rem;
+    overflow-x: auto;
+  }
+
+  .calendar-container .fc {
+    min-width: 620px;
+  }
+
+  .users-table-wrapper {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .app-footer {
+    padding-top: 1rem;
+  }
+
+  .glass-card {
+    border-radius: var(--radius-lg);
+  }
+
+  .page-title {
+    font-size: 1.75rem;
+  }
+
+  .tabs,
+  .calendar-tabs,
+  .admin-tabs,
+  .profile-tabs,
+  .detail-tabs,
+  .view-tabs,
+  .trips-tabs {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar,
+  .calendar-tabs::-webkit-scrollbar,
+  .admin-tabs::-webkit-scrollbar,
+  .profile-tabs::-webkit-scrollbar,
+  .detail-tabs::-webkit-scrollbar,
+  .view-tabs::-webkit-scrollbar,
+  .trips-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabs > *,
+  .calendar-tabs > *,
+  .admin-tabs > *,
+  .profile-tabs > *,
+  .detail-tabs > *,
+  .view-tabs > *,
+  .trips-tabs > * {
+    flex: 0 0 auto;
+  }
+}
+
 /* Text Gradients */
 .text-gradient-cyan {
   background: var(--grad-cyan-blue);

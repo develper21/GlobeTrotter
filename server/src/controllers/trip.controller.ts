@@ -19,7 +19,7 @@ export async function createTrip(req: AuthenticatedRequest, res: Response, next:
     sendCreated(res, { message: 'Trip created successfully', data: await tripService.createTrip(userId(req), { ...req.body, coverPhoto: coverPhotoUrl }) });
   } catch (error) { next(error); }
 }
-export async function listTrips(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { ok(res, 'Trips retrieved successfully', await tripService.listTrips(userId(req), req.query.status as string)); } catch (error) { next(error); } }
+export async function listTrips(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { ok(res, 'Trips retrieved successfully', await tripService.listTrips(userId(req), req.query.status as string, req.query.summary === 'true')); } catch (error) { next(error); } }
 export async function getTrip(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { ok(res, 'Trip retrieved successfully', await tripService.getTrip(userId(req), id(req, 'id'))); } catch (error) { next(error); } }
 export async function updateTrip(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { ok(res, 'Trip updated successfully', await tripService.updateTrip(userId(req), id(req, 'id'), req.body)); } catch (error) { next(error); } }
 export async function deleteTrip(req: AuthenticatedRequest, res: Response, next: NextFunction) { try { await tripService.deleteTrip(userId(req), id(req, 'id')); sendNoContent(res); } catch (error) { next(error); } }

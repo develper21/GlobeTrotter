@@ -231,5 +231,15 @@
 }
 
 @media (max-width: 640px) {
+  .itinerary-header { padding: 1rem; }
+  .itinerary-header > div { width: 100%; }
+  .view-tabs { width: 100%; overflow-x: auto; }
+  .stop-header { align-items: flex-start; padding: 1rem; }
+  .stop-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .stop-budget { width: 100%; justify-content: flex-end; padding-right: 0; }
+  .stop-body { padding: 1rem; }
+  .activity-item { align-items: flex-start; flex-wrap: wrap; }
+  .activity-cost { margin-left: auto; }
+  .add-stop-form { padding: 1.25rem; }
   .form-row-3 { grid-template-columns: 1fr; }
 }

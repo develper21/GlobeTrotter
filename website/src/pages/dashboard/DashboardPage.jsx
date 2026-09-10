@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Map, MapPin, TrendingUp, Clock, Users, Compass, ArrowRight, Star, Globe, Sparkles, Calendar, Search } from 'lucide-react';
@@ -7,7 +7,6 @@ import api from '../../lib/api';
 import TripCard from '../../components/trips/TripCard';
 import CityCard from '../../components/cities/CityCard';
 import { SkeletonCard } from '../../components/common/Loader';
-import toast from 'react-hot-toast';
 import './Dashboard.css';
 
 const staggerParent = {
@@ -24,23 +23,25 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
   const [cities, setCities] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [tripsLoading, setTripsLoading] = useState(true);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [shouldLoadCities, setShouldLoadCities] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState(null);
+  const [citiesError, setCitiesError] = useState(null);
+  const popularCitiesRef = useRef(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    let cancelled = false;
+
+    const fetchTrips = async () => {
+      setTripsLoading(true);
       setError(null);
       try {
-        const [tripsRes, citiesRes] = await Promise.all([
-          api.get('/trips?sortBy=createdAt&order=desc'),
-          api.get('/cities?limit=10&sortBy=popularityScore'),
-        ]);
-        
+        const tripsRes = await api.get('/trips?summary=true');
         const tripsData = tripsRes.data.data?.trips || tripsRes.data.data || tripsRes.data.trips || [];
-        const citiesData = citiesRes.data.data?.cities || citiesRes.data.data || citiesRes.data.cities || [];
-        
+
+        if (cancelled) return;
         setTrips(Array.isArray(tripsData) ? tripsData.map((trip) => ({
           ...trip,
           tripName: trip.tripName || trip.name,
@@ -48,18 +49,68 @@ export default function DashboardPage() {
           isPublic: trip.isPublic ?? trip.visibility === 'PUBLIC',
           status: trip.status?.toLowerCase(),
         })) : []);
-        setCities(Array.isArray(citiesData) ? citiesData : []);
       } catch (err) {
+        if (cancelled) return;
         console.error('Dashboard fetching error:', err);
         setError(err.message || 'Failed to connect to backend server');
         setTrips([]);
-        setCities([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setTripsLoading(false);
       }
     };
-    fetchData();
+
+    fetchTrips();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => {
+    const section = popularCitiesRef.current;
+    if (!section || shouldLoadCities) return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoadCities(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '150px 0px' }
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [shouldLoadCities]);
+
+  useEffect(() => {
+    if (!shouldLoadCities) return undefined;
+
+    let cancelled = false;
+    const fetchCities = async () => {
+      setCitiesLoading(true);
+      setCitiesError(null);
+      try {
+        const citiesRes = await api.get('/cities?page=1&limit=6&sort=popularity');
+        const citiesData = citiesRes.data.data?.items || citiesRes.data.data?.cities || citiesRes.data.data || citiesRes.data.cities || [];
+
+        if (!cancelled) setCities(Array.isArray(citiesData) ? citiesData : []);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Dashboard destinations fetching error:', err);
+          setCitiesError(err.message || 'Failed to load destinations');
+        }
+      } finally {
+        if (!cancelled) setCitiesLoading(false);
+      }
+    };
+
+    fetchCities();
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldLoadCities]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -156,7 +207,7 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {!loading && !error && (
+        {!tripsLoading && !error && (
           <section className="budget-highlight-grid">
             <div className="budget-highlight-card">
               <span className="panel-eyebrow">Budget Highlights</span>
@@ -224,7 +275,7 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Loading Skeleton */}
-        {loading && (
+        {tripsLoading && (
           <div style={{ marginTop: '2rem' }}>
             <h2 className="section-title">Loading Your Dashboard...</h2>
             <SkeletonCard count={3} />
@@ -232,7 +283,7 @@ export default function DashboardPage() {
         )}
 
         {/* Recent Trips Section */}
-        {!loading && recentTrips.length > 0 && (
+        {!tripsLoading && recentTrips.length > 0 && (
           <section className="dashboard-section">
             <div className="section-header">
               <div>
@@ -254,7 +305,7 @@ export default function DashboardPage() {
         )}
 
         {/* Empty Trips State */}
-        {!loading && trips.length === 0 && !error && (
+        {!tripsLoading && trips.length === 0 && !error && (
           <motion.div className="dash-empty-card glass-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <img src="/empty-trips.svg" alt="No Trips" className="dash-empty-img" />
             <h3>No Travel Itineraries Found</h3>
@@ -265,8 +316,27 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* Popular Worldwide Destinations */}
-        {!loading && cities.length > 0 && (
+        {/* Popular Worldwide Destinations: loaded as the user approaches this section. */}
+        <div ref={popularCitiesRef} className="dashboard-deferred-section">
+        {citiesLoading && (
+          <section className="dashboard-section">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Popular Destinations Worldwide</h2>
+                <p className="section-subtitle">Loading destinations when you reach them</p>
+              </div>
+            </div>
+            <SkeletonCard count={2} />
+          </section>
+        )}
+
+        {citiesError && !citiesLoading && (
+          <div className="empty-state error-state">
+            <p>Destinations could not be loaded right now.</p>
+          </div>
+        )}
+
+        {!citiesLoading && !citiesError && cities.length > 0 && (
           <section className="dashboard-section popular-cities-section">
             <div className="section-header">
               <div>
@@ -317,6 +387,7 @@ export default function DashboardPage() {
             </motion.div>
           </section>
         )}
+        </div>
 
         {/* Community Banner */}
         <motion.section 

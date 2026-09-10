@@ -172,4 +172,7 @@
 
 @media (max-width: 640px) {
   .budget-stats-grid { grid-template-columns: 1fr; }
+  .budget-chart-card, .budget-breakdown { padding: 1.25rem; }
+  .budget-table { min-width: 520px; }
+  .budget-breakdown { overflow-x: auto; }
 }

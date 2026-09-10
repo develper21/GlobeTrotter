@@ -74,7 +74,10 @@ export const updateTripSchema = z.object({ params: z.object({ id }), body: dateR
   startDate: date.optional(), endDate: date.optional(), visibility: z.enum(['PRIVATE', 'PUBLIC']).optional(),
 }) });
 export const tripIdSchema = z.object({ params: z.object({ id }) });
-export const listTripsSchema = z.object({ query: z.object({ status: z.enum(['UPCOMING', 'ONGOING', 'COMPLETED']).optional() }) });
+export const listTripsSchema = z.object({ query: z.object({
+  status: z.enum(['UPCOMING', 'ONGOING', 'COMPLETED']).optional(),
+  summary: z.enum(['true', 'false']).optional().default('false'),
+}) });
 export const createStopSchema = z.object({ params: z.object({ id }), body: dateRange({ cityId: id, startDate: date, endDate: date, notes: z.string().trim().max(5000).optional() }) });
 export const updateStopSchema = z.object({ params: z.object({ id, stopId: id }), body: dateRange({ cityId: id.optional(), startDate: date.optional(), endDate: date.optional(), notes: z.string().trim().max(5000).optional() }) });
 export const stopParamsSchema = z.object({ params: z.object({ id, stopId: id }) });
