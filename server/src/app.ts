@@ -33,12 +33,25 @@ export function createApp(): Application {
         // Allow requests with no origin (e.g. curl, Postman, server-to-server)
         if (!origin) return callback(null, true);
 
-        if (config.cors.allowedOrigins.includes(origin)) {
+        const normalizedOrigin = origin.replace(/\/+$/, '');
+        const isAllowed = config.cors.allowedOrigins.some((allowed) => {
+          const normAllowed = allowed.replace(/\/+$/, '');
+          if (normAllowed === '*' || normAllowed === normalizedOrigin) {
+            return true;
+          }
+          // Support wildcard domains like *.netlify.app
+          if (normAllowed.startsWith('*.') && normalizedOrigin.endsWith(normAllowed.slice(1))) {
+            return true;
+          }
+          return false;
+        });
+
+        if (isAllowed) {
           return callback(null, true);
         }
 
         appLogger.warn(`Blocked CORS request from origin: ${origin}`);
-        return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+        return callback(null, false);
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

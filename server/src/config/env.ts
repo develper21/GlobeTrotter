@@ -45,13 +45,18 @@ const config = {
   },
 
   cors: {
-    allowedOrigins: optionalEnv(
-      'ALLOWED_ORIGINS',
-      'http://localhost:5173,http://localhost:3000'
-    )
-      .split(',')
-      .map((o) => o.trim())
-      .filter(Boolean),
+    allowedOrigins: Array.from(
+      new Set([
+        ...optionalEnv(
+          'ALLOWED_ORIGINS',
+          'http://localhost:5173,http://localhost:3000'
+        )
+          .split(',')
+          .map((o) => o.trim().replace(/\/+$/, ''))
+          .filter(Boolean),
+        optionalEnv('FRONTEND_URL', 'http://localhost:5173').trim().replace(/\/+$/, ''),
+      ])
+    ).filter(Boolean),
   },
 
   rateLimit: {
