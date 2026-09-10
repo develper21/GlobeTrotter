@@ -19,9 +19,8 @@
     "noUnusedParameters": false,
     "strictNullChecks": true,
     "exactOptionalPropertyTypes": false,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],

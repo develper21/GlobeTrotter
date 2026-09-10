@@ -8,7 +8,10 @@ build/
 # Environment secrets
 .env
 .env.local
+.env.prod
 .env.production
+.env.*
+!.env.example
 
 # Prisma generated files (keep schema, ignore generated client if needed)
 # prisma/generated/

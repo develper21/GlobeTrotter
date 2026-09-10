@@ -293,9 +293,9 @@ server/
 
 ## Current Sprint
 
-**Sprint 2 — Authentication, Users & Travel Data** ✅
+**Sprint 5 — Community, Admin & Final Integration** ✅
 
-Builds on the backend foundation with JWT authentication, role-based access, user management, and read APIs for countries, cities, and activities.
+Completes the backend with community posts, admin analytics, role-protected user management, security review, and final integration coverage.
 
 **What is implemented:**
 - TypeScript + Express project scaffolding
@@ -315,14 +315,22 @@ Builds on the backend foundation with JWT authentication, role-based access, use
 - User registration, login, profile, and management endpoints
 - Country, city, and activity read endpoints with filtering and pagination
 - Prisma seed data for Sprint 2 entities
+- Trip CRUD with computed UPCOMING, ONGOING, and COMPLETED status
+- Owned trip stops with date validation, overlap protection, and atomic reorder
+- Unique itinerary days with date-boundary validation
+- Trip-specific activities with time validation, city consistency, and atomic reorder
+- Complete ordered itinerary endpoint
+- Trip budgets, categorized expenses, summaries, daily spending, and over-budget detection
+- Calendar data derived from ordered itinerary days and activities
+- Dashboard with owned trip status groups, popular destinations, and budget highlights
+- Saved destination management with duplicate protection
+- Privacy-safe public trip sharing and authenticated copy-trip workflow
+- Community posts with search, sorting, pagination, ownership, and safe author/trip projections
+- Admin user management, platform statistics, popular cities/activities, engagement, and trends
 
-**What is NOT implemented (future sprints):**
-- Trips / stops / itinerary
-- Budget / expenses
-- Calendar / timeline
-- Community
-- Public sharing
-- Admin analytics
+**What is NOT implemented:**
+- Likes, comments, and social notifications
+- Payments, bookings, AI itinerary generation, and external travel integrations
 
 ---
 
@@ -332,14 +340,44 @@ Builds on the backend foundation with JWT authentication, role-based access, use
 |---|---|
 | ✅ 1 | Backend Foundation |
 | ✅ 2 | Authentication, Users & Travel Data |
-| 3 | Countries, Cities & Activities |
-| 4 | Trip Management |
-| 5 | Multi-City Stops |
-| 6 | Itinerary Builder |
-| 7 | Budget & Expenses |
-| 8 | Calendar & Timeline |
-| 9 | Dashboard & Personalization |
-| 10 | Public Sharing & Copy Trip |
-| 11 | Community |
-| 12 | Admin & Analytics |
-| 13 | Security, Optimization, Testing & Frontend Integration |
+| ✅ 3 | Trip Management, Multi-City Stops & Itinerary |
+| ✅ 4 | Budget, Expenses, Calendar, Dashboard & Sharing |
+| ✅ 5 | Community, Admin, Security & Final Integration |
+
+## Sprint 3 API Endpoints
+
+All endpoints below require `Authorization: Bearer <token>`.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST/GET | `/api/trips` | Create or list owned trips |
+| GET/PATCH/DELETE | `/api/trips/:id` | Retrieve, update, or delete a trip |
+| POST/GET | `/api/trips/:id/stops` | Add or list city stops |
+| GET/PATCH/DELETE | `/api/trips/:id/stops/:stopId` | Manage one stop |
+| PATCH | `/api/trips/:id/stops/reorder` | Atomically reorder stops |
+| POST/GET | `/api/trips/:id/days` | Create or list itinerary days |
+| GET/PATCH/DELETE | `/api/trips/:id/days/:dayId` | Manage one itinerary day |
+| POST | `/api/trips/:id/days/:dayId/activities` | Schedule an activity |
+| PATCH/DELETE | `/api/trip-activities/:id` | Update or remove a scheduled activity |
+| PATCH | `/api/trip-activities/reorder` | Atomically reorder day activities |
+| GET | `/api/trips/:id/itinerary` | Fetch the ordered complete itinerary |
+
+## Sprint 4 API Endpoints
+
+All private endpoints require `Authorization: Bearer <token>`.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| PATCH | `/api/trips/:tripId/budget` | Set planned budget |
+| POST/GET | `/api/trips/:tripId/expenses` | Create or list expenses |
+| GET/PATCH/DELETE | `/api/trips/:tripId/expenses/:expenseId` | Manage one expense |
+| GET | `/api/trips/:tripId/budget` | Calculate budget summary and category totals |
+| GET | `/api/trips/:tripId/budget/daily` | Calculate daily spending and alerts |
+| GET | `/api/trips/:tripId/calendar` | Return activities grouped by date |
+| GET | `/api/dashboard` | Return owned trip and budget highlights |
+| POST/GET/DELETE | `/api/users/me/saved-destinations/:cityId` | Save, list, or remove destinations |
+| POST/DELETE | `/api/trips/:tripId/share` | Enable or disable public sharing |
+| GET | `/api/public/trips/:shareSlug` | Read-only public itinerary |
+| POST | `/api/public/trips/:shareSlug/copy` | Copy a public itinerary to the logged-in user |
+
+Budget totals use explicit `TripExpense` records only. `TripActivity.customCost` remains an itinerary estimate and is not double-counted. Daily budget is total planned budget divided by inclusive trip days. Copied trips include stops, days, and scheduled activities, reuse master cities and activities, exclude historical expenses, and default to `PRIVATE`.

@@ -1,8 +1,35 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
-// Load .env file from the server root
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// ─── Smart Environment Loading ────────────────────────────────────────────────
+// Determine environment mode (production vs development/test)
+const rawNodeEnv = (process.env.NODE_ENV || '').trim().toLowerCase();
+const isProdRequested = rawNodeEnv === 'production' || rawNodeEnv === 'producation';
+
+const serverRoot = path.resolve(__dirname, '../../');
+
+// In production mode, look for .env.prod first, then .env.production, then .env
+// In local/development mode, look for .env.local first, then .env.development, then .env
+const envCandidateFiles = isProdRequested
+  ? ['.env.prod', '.env.production', '.env']
+  : ['.env.local', '.env.development', '.env'];
+
+let loadedEnvFile: string | null = null;
+for (const candidate of envCandidateFiles) {
+  const fullPath = path.join(serverRoot, candidate);
+  if (fs.existsSync(fullPath)) {
+    dotenv.config({ path: fullPath });
+    loadedEnvFile = candidate;
+    break;
+  }
+}
+
+if (loadedEnvFile) {
+  console.log(`[Config] Loaded environment variables from: ${loadedEnvFile} (Mode: ${process.env.NODE_ENV || (isProdRequested ? 'production' : 'development')})`);
+} else {
+  dotenv.config({ path: path.join(serverRoot, '.env') });
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,13 +57,17 @@ function optionalEnvNumber(key: string, fallback: number): number {
 
 // ─── Config Object ────────────────────────────────────────────────────────────
 
+const activeEnv = (optionalEnv('NODE_ENV', 'development')).toLowerCase();
+const isProduction = activeEnv === 'production' || activeEnv === 'producation';
+
 const config = {
   app: {
-    nodeEnv: optionalEnv('NODE_ENV', 'development'),
+    nodeEnv: isProduction ? 'production' : activeEnv,
     port: optionalEnvNumber('PORT', 5000),
-    isDevelopment: optionalEnv('NODE_ENV', 'development') === 'development',
-    isProduction: optionalEnv('NODE_ENV', 'development') === 'production',
-    isTest: optionalEnv('NODE_ENV', 'development') === 'test',
+    frontendUrl: optionalEnv('FRONTEND_URL', 'http://localhost:5173'),
+    isDevelopment: !isProduction && activeEnv !== 'test',
+    isProduction,
+    isTest: activeEnv === 'test',
   },
 
   database: {
@@ -44,13 +75,18 @@ const config = {
   },
 
   cors: {
-    allowedOrigins: optionalEnv(
-      'ALLOWED_ORIGINS',
-      'http://localhost:5173,http://localhost:3000'
-    )
-      .split(',')
-      .map((o) => o.trim())
-      .filter(Boolean),
+    allowedOrigins: Array.from(
+      new Set([
+        ...optionalEnv(
+          'ALLOWED_ORIGINS',
+          'http://localhost:5173,http://localhost:3000'
+        )
+          .split(',')
+          .map((o) => o.trim().replace(/\/+$/, ''))
+          .filter(Boolean),
+        optionalEnv('FRONTEND_URL', 'http://localhost:5173').trim().replace(/\/+$/, ''),
+      ])
+    ).filter(Boolean),
   },
 
   rateLimit: {

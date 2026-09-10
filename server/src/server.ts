@@ -26,12 +26,12 @@ async function bootstrap(): Promise<void> {
     serverLogger.warn('Could not connect to database on startup — continuing anyway', { err });
   }
 
-  const server = app.listen(port, () => {
+  const server = app.listen(port, '0.0.0.0', () => {
     serverLogger.info(`🚀 GlobeTrotter API server started`);
     serverLogger.info(`   Environment : ${nodeEnv}`);
     serverLogger.info(`   Port        : ${port}`);
-    serverLogger.info(`   URL         : http://localhost:${port}`);
-    serverLogger.info(`   Health      : http://localhost:${port}/api/health`);
+    serverLogger.info(`   URL         : http://0.0.0.0:${port}`);
+    serverLogger.info(`   Health      : http://0.0.0.0:${port}/api/health`);
   });
 
   // ── Graceful Shutdown ──────────────────────────────────────────────────────
