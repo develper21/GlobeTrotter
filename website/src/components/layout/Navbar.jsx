@@ -14,6 +14,7 @@ const navLinks = [
   { to: '/dashboard', icon: <Home size={18} />, label: 'Dashboard' },
   { to: '/trips', icon: <Map size={18} />, label: 'My Trips' },
   { to: '/cities', icon: <Compass size={18} />, label: 'Explore' },
+  { to: '/activities', icon: <Sparkles size={18} />, label: 'Activities' },
   { to: '/community', icon: <Users size={18} />, label: 'Community' },
   { to: '/calendar', icon: <Calendar size={18} />, label: 'Calendar' },
 ];
