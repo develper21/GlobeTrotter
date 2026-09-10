@@ -2,11 +2,12 @@ import { Router } from 'express';
 import * as controller from '../controllers/trip.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
+import { upload } from '../middlewares/upload.middleware';
 import { addTripActivitySchema, createDaySchema, createStopSchema, createTripSchema, dayParamsSchema, listTripsSchema, reorderActivitiesSchema, reorderStopsSchema, stopParamsSchema, tripActivityParamsSchema, tripIdSchema, updateDaySchema, updateStopSchema, updateTripActivitySchema, updateTripSchema } from '../validators/trip.validator';
 
 const router = Router();
 router.use(authMiddleware);
-router.post('/', validate(createTripSchema), controller.createTrip);
+router.post('/', upload.single('coverPhoto'), validate(createTripSchema), controller.createTrip);
 router.get('/', validate(listTripsSchema), controller.listTrips);
 router.get('/:id/itinerary', validate(tripIdSchema), controller.itinerary);
 router.patch('/:id/stops/reorder', validate(reorderStopsSchema), controller.reorderStops);
@@ -22,6 +23,7 @@ router.patch('/:id/days/:dayId', validate(updateDaySchema), controller.updateDay
 router.delete('/:id/days/:dayId', validate(dayParamsSchema), controller.deleteDay);
 router.post('/:id/days/:dayId/activities', validate(addTripActivitySchema), controller.addActivity);
 router.get('/:id', validate(tripIdSchema), controller.getTrip);
+router.post('/:id/clone', validate(tripIdSchema), controller.cloneTrip);
 router.patch('/:id', validate(updateTripSchema), controller.updateTrip);
 router.delete('/:id', validate(tripIdSchema), controller.deleteTrip);
 export default router;
