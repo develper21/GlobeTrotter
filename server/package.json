@@ -4,7 +4,7 @@
   "description": "GlobeTrotter Travel Planning Application — Backend API",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "dotenv -e .env.local -- ts-node-dev --respawn --transpile-only src/server.ts",
+    "dev": "node scripts/dev.js",
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "start:local": "dotenv -e .env.local -- node dist/server.js",
