@@ -44,3 +44,87 @@ export async function updateActivity(userId: number, id: number, input: any) { c
 export async function deleteActivity(userId: number, id: number) { const item = await prisma.tripActivity.findUnique({ where: { id }, include: { tripDay: true } }); if (!item) throw new NotFoundError(`Trip activity with ID ${id} not found`); await ownedTrip(userId, item.tripDay.tripId); await prisma.tripActivity.delete({ where: { id } }); }
 export async function reorderActivities(userId: number, tripDayId: number, activityIds: number[]) { const day = await prisma.tripDay.findUnique({ where: { id: tripDayId }, include: { activities: { select: { id: true } } } }); if (!day) throw new NotFoundError(`Itinerary day with ID ${tripDayId} not found`); await ownedTrip(userId, day.tripId); if (day.activities.length !== activityIds.length || day.activities.some((item) => !activityIds.includes(item.id))) throw new BadRequestError('activityIds must contain every activity in this day exactly once'); await prisma.$transaction([...activityIds.map((id, index) => prisma.tripActivity.update({ where: { id }, data: { sequence: -(index + 1) } })), ...activityIds.map((id, index) => prisma.tripActivity.update({ where: { id }, data: { sequence: index + 1 } }))]); }
 export async function itinerary(userId: number, tripId: number) { await ownedTrip(userId, tripId); const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, include: tripInclude }); if (!trip) throw new NotFoundError(`Trip with ID ${tripId} not found`); return { trip: serializeTrip(trip), stops: trip.stops, days: trip.days }; }
+
+export async function cloneTrip(userId: number, tripId: number) {
+  const originalTrip = await prisma.trip.findUnique({
+    where: { id: tripId },
+    include: {
+      stops: { include: { city: true }, orderBy: { order: 'asc' } },
+      days: { include: { activities: { include: { activity: true } } }, orderBy: { date: 'asc' } },
+    },
+  });
+
+  if (!originalTrip) throw new NotFoundError(`Trip with ID ${tripId} not found`);
+  if (originalTrip.visibility !== 'PUBLIC') throw new ForbiddenError('Cannot clone a private trip');
+
+  const clonedTrip = await prisma.trip.create({
+    data: {
+      userId,
+      name: `Copy of ${originalTrip.name}`,
+      description: originalTrip.description,
+      coverPhoto: originalTrip.coverPhoto,
+      startDate: originalTrip.startDate,
+      endDate: originalTrip.endDate,
+      visibility: 'PRIVATE',
+      budgetAmount: originalTrip.budgetAmount,
+      budgetCurrency: originalTrip.budgetCurrency,
+    },
+  });
+
+  const clonedStops = await Promise.all(
+    originalTrip.stops.map((stop) =>
+      prisma.tripStop.create({
+        data: {
+          tripId: clonedTrip.id,
+          cityId: stop.cityId,
+          startDate: stop.startDate,
+          endDate: stop.endDate,
+          order: stop.order,
+          notes: stop.notes,
+        },
+      })
+    )
+  );
+
+  const stopIdMap = new Map(originalTrip.stops.map((stop, idx) => [stop.id, clonedStops[idx].id]));
+
+  const clonedDays = await Promise.all(
+    originalTrip.days.map((day) =>
+      prisma.tripDay.create({
+        data: {
+          tripId: clonedTrip.id,
+          date: day.date,
+          title: day.title,
+          notes: day.notes,
+        },
+      })
+    )
+  );
+
+  const dayIdMap = new Map(originalTrip.days.map((day, idx) => [day.id, clonedDays[idx].id]));
+
+  await Promise.all(
+    originalTrip.days.flatMap((day) =>
+      day.activities.map((activity) => {
+        const mappedTripDayId = dayIdMap.get(day.id);
+        if (!mappedTripDayId) throw new BadRequestError('Failed to map day ID during cloning');
+        return prisma.tripActivity.create({
+          data: {
+            tripDayId: mappedTripDayId,
+            activityId: activity.activityId,
+            startTime: activity.startTime,
+            endTime: activity.endTime,
+            customCost: activity.customCost,
+            notes: activity.notes,
+            sequence: activity.sequence,
+          },
+        });
+      })
+    )
+  );
+
+  return serializeTrip(await prisma.trip.findUnique({
+    where: { id: clonedTrip.id },
+    include: { _count: { select: { stops: true } }, stops: { orderBy: { order: 'asc' }, include: { city: true } } },
+  }));
+}
