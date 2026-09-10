@@ -1,7 +1,39 @@
 import { ExpenseCategory, PrismaClient, Role, Visibility } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 
-const prisma = new PrismaClient();
+// ─── Environment Loading for Seed Script ──────────────────────────────────────
+const rawNodeEnv = (process.env.NODE_ENV || '').trim().toLowerCase();
+const isProd = rawNodeEnv === 'production' || rawNodeEnv === 'producation';
+const rootDir = path.resolve(__dirname, '..');
+
+const envCandidates = isProd
+  ? ['.env.prod', '.env.production', '.env']
+  : ['.env.local', '.env.development', '.env'];
+
+for (const f of envCandidates) {
+  const p = path.join(rootDir, f);
+  if (fs.existsSync(p)) {
+    dotenv.config({ path: p });
+    console.log(`[Seed] Loaded environment from: ${f} (Target: ${isProd ? 'PRODUCTION' : 'LOCAL'})`);
+    break;
+  }
+}
+
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) {
+  throw new Error('[Seed] DATABASE_URL is not set. Please check your .env files.');
+}
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: dbUrl,
+    },
+  },
+});
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 
 async function main() {

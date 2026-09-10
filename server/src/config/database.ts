@@ -15,6 +15,11 @@ declare global {
 
 function createPrismaClient(): PrismaClient {
   return new PrismaClient({
+    datasources: {
+      db: {
+        url: config.database.url,
+      },
+    },
     log: config.app.isDevelopment
       ? ['query', 'info', 'warn', 'error']
       : ['warn', 'error'],
