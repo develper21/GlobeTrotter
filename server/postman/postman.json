@@ -1,0 +1,2317 @@
+{
+  "info": {
+    "_postman_id": "9f1d4c2e-3a7b-4c85-b6d0-1e8f5a9c2d47",
+    "name": "GlobeTrotter — Backend API",
+    "description": "Complete Postman collection for the GlobeTrotter backend REST API (Express + TypeScript + Prisma + PostgreSQL).\n\n────────────────────────────────────────────\nHOW TO RUN\n────────────────────────────────────────────\n1. Start the server:  cd server && npm run dev   (http://localhost:5000)\n2. Run requests top-to-bottom — every id (tripId, stopId, dayId, expenseId, shareSlug, ...) is AUTO-CAPTURED from responses into collection variables.\n3. Auth: run Auth → Login once. The Bearer token is saved to {{accessToken}} automatically and applied to all protected routes.\n\n────────────────────────────────────────────\nQUICK FLOW\n────────────────────────────────────────────\nHealth → Auth (Register + Login) → Countries/Cities/Activities (captures master data ids) → Trips → Days → Activities → Budget & Expenses → Dashboard & Saved → Sharing → Community → Admin → Errors.\n\nNOTE: The API rate-limits to 100 requests per 15 min per IP. If you run the whole collection repeatedly, expect 429s near the end (RateLimitExceeded responses are included in the Errors folder).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api" },
+    { "key": "accessToken", "value": "" },
+    { "key": "countryId", "value": "" },
+    { "key": "cityId", "value": "" },
+    { "key": "activityId", "value": "" },
+    { "key": "tripId", "value": "" },
+    { "key": "stopId", "value": "" },
+    { "key": "dayId", "value": "" },
+    { "key": "tripActivityId", "value": "" },
+    { "key": "expenseId", "value": "" },
+    { "key": "shareSlug", "value": "" },
+    { "key": "postId", "value": "" },
+    { "key": "userId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health — Sprint 1",
+      "description": "Liveness and database connectivity checks. No authentication required.",
+      "item": [
+        {
+          "name": "Application Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Success envelope', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(true);",
+                  "    pm.expect(json.message).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "GET /api/health — always-fast application liveness probe."
+          },
+          "response": []
+        },
+        {
+          "name": "Database Health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200 or 503', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                  "});",
+                  "pm.test('Structured response', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('success');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/db",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "db"]
+            },
+            "description": "GET /api/health/db — pings PostgreSQL. Returns 503 when the database is unreachable (expected if Postgres is not running)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Registration, login, current user and profile photo upload.\n\nRun Login first — it stores {{accessToken}} used by every protected request in this collection.\nRegister does NOT return a token (users log in after sign-up), so after Register run Login with the same credentials.",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Safe user returned (no passwordHash)', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(true);",
+                  "    pm.expect(json.data.user).to.have.property('id');",
+                  "    pm.expect(json.data.user).to.not.have.property('passwordHash');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Postman\",\n  \"lastName\": \"Tester\",\n  \"username\": \"pm_tester_{{$timestamp}}\",\n  \"email\": \"pm_tester_{{$timestamp}}@globetrotter.test\",\n  \"password\": \"Test@12345\",\n  \"phone\": \"+91 98765 43210\",\n  \"city\": \"Ahmedabad\",\n  \"country\": \"India\",\n  \"bio\": \"Testing the GlobeTrotter API from Postman.\",\n  \"language\": \"en\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "POST /api/auth/register — creates a USER account (role is always USER). Email + username must be unique; {{$timestamp}} keeps reruns conflict-free. Optional fields: phone, city, country, bio, profilePhoto, language."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Access token captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.accessToken).to.be.a('string').that.is.not.empty;",
+                  "    pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "    console.log('accessToken saved to collection variables');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@globetrotter.com\",\n  \"password\": \"Demo@123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "POST /api/auth/login — seeded demo credentials. Swap in your own registered credentials if you prefer. Saves data.accessToken into {{accessToken}} for the whole collection."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User (me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns current user', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.user).to.have.property('email');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "GET /api/auth/me — requires Authorization: Bearer {{accessToken}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile (multipart avatar)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Profile updated', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.user).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "firstName", "value": "Postman", "type": "text" },
+                { "key": "lastName", "value": "Tester Jr.", "type": "text" },
+                { "key": "bio", "value": "Updated bio from Postman.", "type": "text" },
+                { "key": "profilePhoto", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            },
+            "description": "PATCH /api/auth/profile — multipart/form-data. Attach a file to the profilePhoto field to upload an avatar (goes to Cloudinary). Without a file you may instead send raw JSON { \"profilePhoto\": \"https://...\" }."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Self-service profile management. All routes require authentication.",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Profile returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.user).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "GET /api/users/me"
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Postman\",\n  \"city\": \"Mumbai\",\n  \"country\": \"India\",\n  \"bio\": \"Profile updated via the Postman collection.\",\n  \"language\": \"en\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "PATCH /api/users/me — all fields optional: firstName, lastName, username, phone, city, country, bio, profilePhoto, language."
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Demo@123456\",\n  \"newPassword\": \"Demo@123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/password",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "password"]
+            },
+            "description": "PATCH /api/users/me/password — new password must be at least 8 characters. The demo body keeps the same password so reruns keep working."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete My Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "DELETE /api/users/me — ⚠️ permanently deletes the logged-in account and cascades to its trips. Do NOT run with the demo account unless you can reseed."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Countries",
+      "description": "Master data — countries. Public (no auth). Get All Countries captures {{countryId}} used by later flows.",
+      "item": [
+        {
+          "name": "Get All Countries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Country id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an('array').that.is.not.empty;",
+                  "    pm.collectionVariables.set('countryId', String(json.data[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/countries",
+              "host": ["{{baseUrl}}"],
+              "path": ["countries"]
+            },
+            "description": "GET /api/countries — full country list (seeded: India, France, Italy, Spain, Japan, UK, US, Thailand)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Country By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/countries/{{countryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["countries", "{{countryId}}"]
+            },
+            "description": "GET /api/countries/:id — includes the cities belonging to the country."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cities",
+      "description": "Master data — cities with search, filter, sort and pagination. Public. Get Cities captures {{cityId}}.",
+      "item": [
+        {
+          "name": "Get Cities (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Pagination meta present', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    pm.expect(json.meta).to.have.property('page');",
+                  "    pm.expect(json.meta).to.have.property('totalPages');",
+                  "});",
+                  "pm.test('City id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.length > 0) pm.collectionVariables.set('cityId', String(json.data[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cities?page=1&limit=10&sort=popularity",
+              "host": ["{{baseUrl}}"],
+              "path": ["cities"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sort", "value": "popularity" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "countryId", "value": "{{countryId}}", "disabled": true },
+                { "key": "region", "value": "Europe", "disabled": true }
+              ]
+            },
+            "description": "GET /api/cities — query params: search, countryId, region, sort (popularity | name | cost_asc | cost_desc), page (1..), limit (1..100)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get City By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('City detail returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cities/{{cityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["cities", "{{cityId}}"]
+            },
+            "description": "GET /api/cities/:id — city detail including its activities."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Activities",
+      "description": "Master data — bookable activities per city. Public. Get Activities captures {{activityId}}.",
+      "item": [
+        {
+          "name": "Get Activities (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Activity id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    if (json.data.length > 0) pm.collectionVariables.set('activityId', String(json.data[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities?page=1&limit=10&sort=name",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sort", "value": "name" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "cityId", "value": "{{cityId}}", "disabled": true },
+                { "key": "type", "value": "food", "disabled": true },
+                { "key": "minCost", "value": "0", "disabled": true },
+                { "key": "maxCost", "value": "5000", "disabled": true },
+                { "key": "maxDuration", "value": "180", "disabled": true }
+              ]
+            },
+            "description": "GET /api/activities — query params: search, cityId, type, minCost, maxCost, maxDuration, sort (name | cost_asc | cost_desc | duration_asc | duration_desc), page, limit."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Activity By Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities/{{activityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities", "{{activityId}}"]
+            },
+            "description": "GET /api/activities/:id"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trips",
+      "description": "Owned trip CRUD plus multi-city stops and itinerary days.\n\nRecommended order: Create Trip → Create Stop → Create Day → Add Activity to Day → everything else. Create Trip captures {{tripId}}, Create Stop captures {{stopId}}, Create Day captures {{dayId}}, Add Activity captures {{tripActivityId}}.\n\nTip: to attach a cover photo, switch the Create Trip body to form-data and add a file field named coverPhoto.",
+      "item": [
+        {
+          "name": "Create Trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Trip id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('id');",
+                  "    pm.collectionVariables.set('tripId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Paris Getaway\",\n  \"description\": \"A long weekend of art, food and the Seine.\",\n  \"startDate\": \"2026-12-10\",\n  \"endDate\": \"2026-12-14\",\n  \"visibility\": \"PRIVATE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"]
+            },
+            "description": "POST /api/trips — creates an owned trip. Optional: coverPhoto (multipart file field). endDate must not be before startDate."
+          },
+          "response": []
+        },
+        {
+          "name": "List My Trips",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Trips array returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips?summary=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"],
+              "query": [
+                { "key": "status", "value": "UPCOMING", "disabled": true },
+                { "key": "summary", "value": "true" }
+              ]
+            },
+            "description": "GET /api/trips — optional status filter (UPCOMING | ONGOING | COMPLETED). summary=true returns lightweight cards for dashboards."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Stop (city)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Stop id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('stopId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cityId\": {{cityId}},\n  \"startDate\": \"2026-12-10\",\n  \"endDate\": \"2026-12-12\",\n  \"notes\": \"Museums on day one, food walk on day two.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/stops",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "stops"]
+            },
+            "description": "POST /api/trips/:id/stops — adds a city stop. Stop dates must be inside the trip dates and must not overlap another stop."
+          },
+          "response": []
+        },
+        {
+          "name": "List Stops",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/stops",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "stops"]
+            },
+            "description": "GET /api/trips/:id/stops — ordered city stops."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Stop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/stops/{{stopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "stops", "{{stopId}}"]
+            },
+            "description": "GET /api/trips/:id/stops/:stopId"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Stop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Updated via Postman — do not miss the evening market.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/stops/{{stopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "stops", "{{stopId}}"]
+            },
+            "description": "PATCH /api/trips/:id/stops/:stopId — optional cityId, startDate, endDate, notes."
+          },
+          "response": []
+        },
+        {
+          "name": "Reorder Stops",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stopIds\": [{{stopId}}]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/stops/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "stops", "reorder"]
+            },
+            "description": "PATCH /api/trips/:id/stops/reorder — stopIds must contain every stop of the trip exactly once (no duplicates). Reorder is atomic."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Itinerary Day",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Day id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('dayId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-12-10\",\n  \"title\": \"Arrival & Louvre\",\n  \"notes\": \"Check in, then the museum.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/days",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "days"]
+            },
+            "description": "POST /api/trips/:id/days — one day per date (unique per trip); the date must fall within the trip range."
+          },
+          "response": []
+        },
+        {
+          "name": "List Itinerary Days",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/days",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "days"]
+            },
+            "description": "GET /api/trips/:id/days"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Itinerary Day",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/days/{{dayId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "days", "{{dayId}}"]
+            },
+            "description": "GET /api/trips/:id/days/:dayId — includes scheduled activities."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Itinerary Day",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Arrival, Louvre & Seine walk\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/days/{{dayId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "days", "{{dayId}}"]
+            },
+            "description": "PATCH /api/trips/:id/days/:dayId — optional date, title, notes."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Activity to Day",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Trip activity id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('tripActivityId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activityId\": {{activityId}},\n  \"startTime\": \"10:00\",\n  \"endTime\": \"12:00\",\n  \"customCost\": 2500,\n  \"notes\": \"Pre-booked skip-the-line tickets.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/days/{{dayId}}/activities",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "days", "{{dayId}}", "activities"]
+            },
+            "description": "POST /api/trips/:id/days/:dayId/activities — schedules a master activity on a day. Time uses HH:mm (24h); endTime cannot be before startTime; the activity's city must match a stop covering that date."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Complete Itinerary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/itinerary",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "itinerary"]
+            },
+            "description": "GET /api/trips/:id/itinerary — the fully ordered itinerary (stops → days → activities)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Paris Getaway (edited)\",\n  \"description\": \"Updated from Postman.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            },
+            "description": "PATCH /api/trips/:id — optional name, description, coverPhoto, startDate, endDate, visibility."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            },
+            "description": "GET /api/trips/:id — full trip with computed status."
+          },
+          "response": []
+        },
+        {
+          "name": "Clone Trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Cloned trip returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.name).to.include('(Copy)');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/clone",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "clone"]
+            },
+            "description": "POST /api/trips/:id/clone — deep-copies stops, days and scheduled activities. Expenses are not copied; the clone is PRIVATE."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Stop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/stops/{{stopId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "stops", "{{stopId}}"]
+            },
+            "description": "DELETE /api/trips/:id/stops/:stopId — run LAST in the Trips flow (it removes the captured stop)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Itinerary Day",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/days/{{dayId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "days", "{{dayId}}"]
+            },
+            "description": "DELETE /api/trips/:id/days/:dayId — cascades to the day's scheduled activities."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}"]
+            },
+            "description": "DELETE /api/trips/:id — ⚠️ keep DISABLED in the runner; enables only when you want to remove the test trip. Cascades to stops, days, activities, expenses and share links."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Trip Activities",
+      "description": "Update, reorder and remove activities already scheduled on itinerary days. Requires {{tripActivityId}} (and {{dayId}} for reorder).",
+      "item": [
+        {
+          "name": "Update Scheduled Activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"11:00\",\n  \"endTime\": \"13:30\",\n  \"customCost\": 2700,\n  \"notes\": \"Rescheduled from Postman.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trip-activities/{{tripActivityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trip-activities", "{{tripActivityId}}"]
+            },
+            "description": "PATCH /api/trip-activities/:id — optional startTime, endTime, customCost, notes, sequence."
+          },
+          "response": []
+        },
+        {
+          "name": "Reorder Day Activities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripDayId\": {{dayId}},\n  \"activityIds\": [{{tripActivityId}}]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trip-activities/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["trip-activities", "reorder"]
+            },
+            "description": "PATCH /api/trip-activities/reorder — activityIds must list every activity of that day exactly once. Atomic reorder."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Scheduled Activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trip-activities/{{tripActivityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trip-activities", "{{tripActivityId}}"]
+            },
+            "description": "DELETE /api/trip-activities/:id — ⚠️ removes the captured scheduled activity; rerun Add Activity to Day afterwards if needed."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Budget & Expenses",
+      "description": "Planned budgets, categorized expenses, summaries, daily spending and the derived calendar.\n\nBudget totals count only explicit TripExpense records — TripActivity.customCost is an itinerary estimate and is never double-counted.",
+      "item": [
+        {
+          "name": "Set Trip Budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000,\n  \"currency\": \"INR\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/budget",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "budget"]
+            },
+            "description": "PATCH /api/trips/:tripId/budget — amount must be positive; currency is a 3-letter code (INR, EUR, USD...)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Expense id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('expenseId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"STAY\",\n  \"amount\": 8000,\n  \"currency\": \"INR\",\n  \"date\": \"2026-12-10\",\n  \"description\": \"Hotel near the Louvre\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "expenses"]
+            },
+            "description": "POST /api/trips/:tripId/expenses — category: TRANSPORT | STAY | ACTIVITY | MEAL | OTHER. Optional tripStopId / tripActivityId links."
+          },
+          "response": []
+        },
+        {
+          "name": "List Expenses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/expenses",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "expenses"],
+              "query": [
+                { "key": "category", "value": "STAY", "disabled": true },
+                { "key": "date", "value": "2026-12-10", "disabled": true }
+              ]
+            },
+            "description": "GET /api/trips/:tripId/expenses — optional category and date filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "expenses", "{{expenseId}}"]
+            },
+            "description": "GET /api/trips/:tripId/expenses/:expenseId"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 8500,\n  \"description\": \"Updated after checkout\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "expenses", "{{expenseId}}"]
+            },
+            "description": "PATCH /api/trips/:tripId/expenses/:expenseId — any field may be updated; body may be empty."
+          },
+          "response": []
+        },
+        {
+          "name": "Budget Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Summary contains totals', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('planned');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/budget",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "budget"]
+            },
+            "description": "GET /api/trips/:tripId/budget — planned vs spent, per-category totals and over-budget detection."
+          },
+          "response": []
+        },
+        {
+          "name": "Daily Budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/budget/daily",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "budget", "daily"]
+            },
+            "description": "GET /api/trips/:tripId/budget/daily — planned budget divided by inclusive trip days, with daily spend and alerts."
+          },
+          "response": []
+        },
+        {
+          "name": "Trip Calendar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/calendar",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "calendar"]
+            },
+            "description": "GET /api/trips/:tripId/calendar — activities grouped by date, derived from the ordered itinerary."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/expenses/{{expenseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "expenses", "{{expenseId}}"]
+            },
+            "description": "DELETE /api/trips/:tripId/expenses/:expenseId — run LAST in this folder (removes the captured expense)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard & Saved Destinations",
+      "description": "Aggregated dashboard and the user's saved destinations list.",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard"]
+            },
+            "description": "GET /api/dashboard — owned trips grouped by status, popular destinations and budget highlights."
+          },
+          "response": []
+        },
+        {
+          "name": "Save Destination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 or 409 (duplicate)', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/saved-destinations/{{cityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "saved-destinations", "{{cityId}}"]
+            },
+            "description": "POST /api/users/me/saved-destinations/:cityId — saving the same city twice returns 409 (duplicate protection)."
+          },
+          "response": []
+        },
+        {
+          "name": "List Saved Destinations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/saved-destinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "saved-destinations"]
+            },
+            "description": "GET /api/users/me/saved-destinations"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Saved Destination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/saved-destinations/{{cityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me", "saved-destinations", "{{cityId}}"]
+            },
+            "description": "DELETE /api/users/me/saved-destinations/:cityId"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sharing & Public Trips",
+      "description": "Privacy-safe public sharing. Enable Share captures {{shareSlug}}; Public Trip is the only fully unauthenticated trip read.",
+      "item": [
+        {
+          "name": "Enable Public Sharing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Share slug captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.shareSlug).to.be.a('string').that.is.not.empty;",
+                  "    pm.collectionVariables.set('shareSlug', json.data.shareSlug);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/share",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "share"]
+            },
+            "description": "POST /api/trips/:tripId/share — generates a share slug, flips the trip to PUBLIC and returns a ready-to-share URL. Captures {{shareSlug}}."
+          },
+          "response": []
+        },
+        {
+          "name": "View Public Trip (no auth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Public trip has stops and days', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.have.property('stops');",
+                  "    pm.expect(json.data).to.have.property('days');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/public/trips/{{shareSlug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "trips", "{{shareSlug}}"]
+            },
+            "description": "GET /api/public/trips/:shareSlug — read-only public itinerary. Private or unshared slugs return 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Copy Public Trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Copy created for current user', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data.name).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/public/trips/{{shareSlug}}/copy",
+              "host": ["{{baseUrl}}"],
+              "path": ["public", "trips", "{{shareSlug}}", "copy"]
+            },
+            "description": "POST /api/public/trips/:shareSlug/copy — copies the public itinerary into the logged-in user's account (stops, days, activities; no expenses; PRIVATE)."
+          },
+          "response": []
+        },
+        {
+          "name": "Disable Public Sharing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/{{tripId}}/share",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "{{tripId}}", "share"]
+            },
+            "description": "DELETE /api/trips/:tripId/share — removes the share link; the public URL stops working immediately."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Community",
+      "description": "Community posts with search, sorting and pagination. Listing and reading are public; creating, updating and deleting require auth and ownership. Create Post captures {{postId}}.",
+      "item": [
+        {
+          "name": "List Posts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Pagination meta present', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.meta).to.have.property('page');",
+                  "    pm.expect(json.meta).to.have.property('total');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=latest",
+              "host": ["{{baseUrl}}"],
+              "path": ["community", "posts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "sort", "value": "latest" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "tripId", "value": "{{tripId}}", "disabled": true },
+                { "key": "userId", "value": "{{userId}}", "disabled": true }
+              ]
+            },
+            "description": "GET /api/community/posts — query params: search, sort (latest | oldest | updated), tripId, userId, page, limit. Author and attached trip are privacy-safe projections."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Post id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('postId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Postman test post\",\n  \"content\": \"Paris in December is magical — here is what I learned planning my trip.\",\n  \"image\": \"https://images.unsplash.com/photo-1502602898657-3e91760cbb34\",\n  \"tripId\": {{tripId}}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/community/posts",
+              "host": ["{{baseUrl}}"],
+              "path": ["community", "posts"]
+            },
+            "description": "POST /api/community/posts — title (≤180) and content (≤10000) required; image URL and tripId optional. The attached trip must belong to you and be PUBLIC."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/community/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["community", "posts", "{{postId}}"]
+            },
+            "description": "GET /api/community/posts/:postId"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Postman test post (edited)\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/community/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["community", "posts", "{{postId}}"]
+            },
+            "description": "PATCH /api/community/posts/:postId — only the owner may update. Any of title, content, image, tripId."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/community/posts/{{postId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["community", "posts", "{{postId}}"]
+            },
+            "description": "DELETE /api/community/posts/:postId — only the owner may delete. Run LAST in this folder."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Role-protected platform administration — requires an ADMIN account (seeded: admin@globetrotter.com / AdminSecret99!).\n\nIf you are logged in as a normal USER you will get 403 Forbidden — that is correct behaviour. List Users captures {{userId}}.",
+      "item": [
+        {
+          "name": "List Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('User id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.length > 0) pm.collectionVariables.set('userId', String(json.data[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "role", "value": "USER", "disabled": true },
+                { "key": "isActive", "value": "true", "disabled": true }
+              ]
+            },
+            "description": "GET /api/admin/users — query params: search, role (USER | ADMIN), isActive (true | false), page, limit."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", "{{userId}}"]
+            },
+            "description": "GET /api/admin/users/:userId — full user record plus trip statistics."
+          },
+          "response": []
+        },
+        {
+          "name": "Set User Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{userId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users", "{{userId}}", "status"]
+            },
+            "description": "PATCH /api/admin/users/:userId/status — deactivating a user blocks their logins. Body: { \"isActive\": boolean }."
+          },
+          "response": []
+        },
+        {
+          "name": "Platform Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "stats"]
+            },
+            "description": "GET /api/admin/stats — user, trip and expense totals for the admin overview."
+          },
+          "response": []
+        },
+        {
+          "name": "Popular Cities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/popular-cities",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "popular-cities"]
+            },
+            "description": "GET /api/admin/popular-cities — most-visited cities across all trips."
+          },
+          "response": []
+        },
+        {
+          "name": "Popular Activities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/popular-activities",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "popular-activities"]
+            },
+            "description": "GET /api/admin/popular-activities — most-scheduled activities."
+          },
+          "response": []
+        },
+        {
+          "name": "Engagement",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/engagement",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "engagement"]
+            },
+            "description": "GET /api/admin/engagement — community and platform engagement metrics."
+          },
+          "response": []
+        },
+        {
+          "name": "Trends",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/trends",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "trends"]
+            },
+            "description": "GET /api/admin/trends — signups, trips and expenses over time for trend charts."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Errors — Negative Testing",
+      "description": "Deliberate failure cases proving the API responds with the standard error envelope { success: false, message, error: { code } } and correct status codes.",
+      "item": [
+        {
+          "name": "401 — Login with wrong password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('Generic message (no account leakage)', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.success).to.eql(false);",
+                  "    pm.expect(json.message).to.eql('Invalid email or password');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@globetrotter.com\",\n  \"password\": \"wrong-password\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "POST /api/auth/login — invalid credentials return 401 UNAUTHORIZED."
+          },
+          "response": []
+        },
+        {
+          "name": "401 — Missing token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": {
+              "raw": "{{baseUrl}}/trips",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"]
+            },
+            "description": "GET /api/trips without a Bearer token — protected routes must reject anonymous access."
+          },
+          "response": []
+        },
+        {
+          "name": "400 — Validation failure",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Field-level details returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error.code).to.eql('VALIDATION_ERROR');",
+                  "    pm.expect(json.error.details).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"\",\n  \"lastName\": \"T\",\n  \"username\": \"x\",\n  \"email\": \"not-an-email\",\n  \"password\": \"123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "POST /api/auth/register — malformed body returns 400 with error.details listing every failing field."
+          },
+          "response": []
+        },
+        {
+          "name": "404 — Trip not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('NOT_FOUND code returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error.code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/trips/99999999",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips", "99999999"]
+            },
+            "description": "GET /api/trips/99999999 — a trip that does not exist or belongs to another user returns 404 (ownership is not leaked)."
+          },
+          "response": []
+        },
+        {
+          "name": "404 — Unknown route",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Route echoed in message', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.message).to.include('/definitely-not-a-route');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/definitely-not-a-route",
+              "host": ["{{baseUrl}}"],
+              "path": ["definitely-not-a-route"]
+            },
+            "description": "GET /api/definitely-not-a-route — unmatched routes return a structured 404, not an HTML error page."
+          },
+          "response": []
+        },
+        {
+          "name": "403 — Admin route as normal user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 401 or 403', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "stats"]
+            },
+            "description": "GET /api/admin/stats with a non-admin token (or no token) — role-based access control must block it. Login as the seeded admin to see 200."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
