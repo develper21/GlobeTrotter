@@ -1,0 +1,1486 @@
+{
+  "info": {
+    "_postman_id": "b7e2a4f1-5c93-4d0e-8a76-2f9b6d4c1e83",
+    "name": "GlobeTrotter — Frontend Routes",
+    "description": "Postman collection for testing the GlobeTrotter frontend (website/) — every React route and page, the exact API calls each page makes, the UI behavior users see, and the checks to run against each screen.\n\n────────────────────────────────────────────\nHOW TO USE\n────────────────────────────────────────────\n• Local testing:  cd website && npm run dev   → http://localhost:5173 (variable {{webUrl}})\n• Deployed testing: set {{webUrl}} to your Netlify/production URL.\n\n• Screen Checks = manual/visual checklist for each page (open {{webUrl}} + path, click through).\n• API Behind Screen = the exact request the page fires (identical to the server collection, same {{baseUrl}} + {{accessToken}}), so you can verify the data contract behind the UI.\n• Page E2E Flow = full user journeys across screens.\n\nAuth note: the site stores the JWT in localStorage as `token` (plus `user`). On a 401 the axios interceptor clears storage and redirects to /login.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "webUrl", "value": "http://localhost:5173" },
+    { "key": "baseUrl", "value": "http://localhost:5000/api" },
+    { "key": "accessToken", "value": "" },
+    { "key": "cityId", "value": "" },
+    { "key": "activityId", "value": "" },
+    { "key": "tripId", "value": "" },
+    { "key": "stopId", "value": "" },
+    { "key": "dayId", "value": "" },
+    { "key": "tripActivityId", "value": "" },
+    { "key": "expenseId", "value": "" },
+    { "key": "shareSlug", "value": "" },
+    { "key": "postId", "value": "" },
+    { "key": "userId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 · Public Screens (no login)",
+      "description": "Pages visible without an account. Inside the app these are wrapped in PublicRoute — if a token exists in localStorage they auto-redirect to /dashboard.",
+      "item": [
+        {
+          "name": "/login — Login Page",
+          "item": [
+            {
+              "name": "Screen Checks",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "console.log('Open {{webUrl}}/login in the browser and verify:');",
+                      "console.log('1) Email + password fields, submit button, link to /register');",
+                      "console.log('2) Wrong credentials → error toast, user stays on /login');",
+                      "console.log('3) Valid credentials → success toast, token in localStorage, redirect to /dashboard');",
+                      "console.log('4) Visiting /login while already logged in → bounced back to /dashboard (PublicRoute)');"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{webUrl}}/login", "host": ["{{webUrl}}"], "path": ["login"] },
+                "description": "Manual/visual checks for the login screen. Open the URL in a browser to walk through them."
+              },
+              "response": []
+            },
+            {
+              "name": "API Behind Screen — Login",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                      "pm.test('Token captured (same as localStorage token)', function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.data.accessToken).to.be.a('string').that.is.not.empty;",
+                      "    pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"demo@globetrotter.com\",\n  \"password\": \"Demo@123456\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+                "description": "authStore.login() → POST /auth/login → saves data.accessToken to localStorage.token + data.user to localStorage.user."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "/register — Register Page",
+          "item": [
+            {
+              "name": "Screen Checks",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "console.log('Open {{webUrl}}/register in the browser and verify:');",
+                      "console.log('1) First/last name, username, email, password fields render');",
+                      "console.log('2) Client-side validation blocks short passwords and bad emails');",
+                      "console.log('3) Duplicate email/username → 409 toast (A user with this email address already exists)');",
+                      "console.log('4) Success → success toast + redirect to /login');",
+                      "console.log('5) Already logged in → PublicRoute bounces to /dashboard');"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{webUrl}}/register", "host": ["{{webUrl}}"], "path": ["register"] },
+                "description": "Manual/visual checks for the register screen."
+              },
+              "response": []
+            },
+            {
+              "name": "API Behind Screen — Register",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                      "pm.test('User created (no passwordHash leaked)', function () {",
+                      "    const json = pm.response.json();",
+                      "    pm.expect(json.data.user).to.have.property('id');",
+                      "    pm.expect(json.data.user).to.not.have.property('passwordHash');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Postman\",\n  \"lastName\": \"Tester\",\n  \"username\": \"pm_ui_{{$timestamp}}\",\n  \"email\": \"pm_ui_{{$timestamp}}@globetrotter.test\",\n  \"password\": \"Test@12345\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+                "description": "authStore.register() → POST /auth/register (multipart). Response is a user object only — the UI then routes to /login."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 · Auth (Setup for Protected Screens)",
+      "description": "Run Login once — it saves {{accessToken}} so the API calls in the page folders below are authorized, exactly like the real app does via the axios interceptor.",
+      "item": [
+        {
+          "name": "Login (capture token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('accessToken saved', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@globetrotter.com\",\n  \"password\": \"Demo@123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "description": "Same call the login page makes — run once to authorize every request below."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 · Dashboard (/dashboard)",
+      "description": "Home screen after login. Shows trip status groups, popular destinations and budget highlights.",
+      "item": [
+        {
+          "name": "Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/dashboard and verify:');",
+                  "console.log('1) Without a token → ProtectedRoute redirects to /login');",
+                  "console.log('2) Trips (summary=true) + popular cities load in parallel, skeletons/no crash while loading');",
+                  "console.log('3) Empty state appears when there are no trips');",
+                  "console.log('4) Clicking a trip card navigates to /trips/:id');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/dashboard", "host": ["{{webUrl}}"], "path": ["dashboard"] },
+            "description": "Manual/visual checks for the dashboard screen."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Trip summaries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Trip id captured (used for detail screens)', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    if (json.data.length > 0) pm.collectionVariables.set('tripId', String(json.data[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips?summary=true", "host": ["{{baseUrl}}"], "path": ["trips"], "query": [{ "key": "summary", "value": "true" }] },
+            "description": "DashboardPage → GET /trips?summary=true (lightweight cards)."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Popular cities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('City id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    if (json.data.length > 0) pm.collectionVariables.set('cityId', String(json.data[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/cities?page=1&limit=6&sort=popularity", "host": ["{{baseUrl}}"], "path": ["cities"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "6" }, { "key": "sort", "value": "popularity" }] },
+            "description": "DashboardPage → GET /cities?page=1&limit=6&sort=popularity (top destinations strip)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 · Trips (/trips, /trips/create, /trips/:id)",
+      "description": "Trip list, creation form and detail screen with comments/like/clone actions.",
+      "item": [
+        {
+          "name": "/trips — List Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/trips and verify:');",
+                  "console.log('1) Owned trips render as cards with cover, dates and computed status badge');",
+                  "console.log('2) Status tabs (All / Upcoming / Ongoing / Completed) refetch with ?status=...');",
+                  "console.log('3) Delete on a card → confirm → card disappears (DELETE /trips/:id)');",
+                  "console.log('4) Create button opens /trips/create');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/trips", "host": ["{{webUrl}}"], "path": ["trips"] },
+            "description": "Manual/visual checks for the trips list screen."
+          },
+          "response": []
+        },
+        {
+          "name": "/trips/create — Create Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/trips/create and verify:');",
+                  "console.log('1) Name, description, cover photo upload, start/end date pickers render');",
+                  "console.log('2) endDate before startDate is blocked client-side');",
+                  "console.log('3) Submit (multipart/form-data with coverPhoto) → toast + redirect to the new trip detail');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/trips/create", "host": ["{{webUrl}}"], "path": ["trips", "create"] },
+            "description": "Manual/visual checks for the create trip screen."
+          },
+          "response": []
+        },
+        {
+          "name": "/trips/:id — Detail Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/trips/{{tripId}} and verify:');",
+                  "console.log('1) Full trip data renders (name, dates, visibility, cover)');",
+                  "console.log('2) Like + comment actions fire their API calls; clone creates a (Copy) trip');",
+                  "console.log('3) Unknown id → 404 handling (error state, not a white screen)');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/trips/{{tripId}}", "host": ["{{webUrl}}"], "path": ["trips", "{{tripId}}"] },
+            "description": "Manual/visual checks for the trip detail screen."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Create trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Trip id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('tripId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"UI Test Trip\",\n  \"description\": \"Created while testing the frontend routes.\",\n  \"startDate\": \"2026-12-05\",\n  \"endDate\": \"2026-12-09\",\n  \"visibility\": \"PRIVATE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips", "host": ["{{baseUrl}}"], "path": ["trips"] },
+            "description": "CreateTripPage → POST /trips (multipart with coverPhoto). JSON body shown here; use form-data with a coverPhoto file to fully mirror the UI."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — List trips",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips", "host": ["{{baseUrl}}"], "path": ["trips"], "query": [{ "key": "status", "value": "UPCOMING", "disabled": true }] },
+            "description": "TripsPage → GET /trips with optional ?status= filter for the tabs."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Trip detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}"] },
+            "description": "TripDetailPage → GET /trips/:id."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 · Itinerary (/trips/:id/itinerary)",
+      "description": "Day-by-day itinerary builder — stops, days, scheduled activities, drag-and-drop reordering.",
+      "item": [
+        {
+          "name": "Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/trips/{{tripId}}/itinerary and verify:');",
+                  "console.log('1) Add stop modal (city, dates) → stop appears in order');",
+                  "console.log('2) Add day → day header appears under the stop');",
+                  "console.log('3) Add activity to a day (search + time pickers) → renders in sequence');",
+                  "console.log('4) Drag/drop reordering fires the reorder APIs');",
+                  "console.log('5) Edit/delete a stop updates the list instantly');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/trips/{{tripId}}/itinerary", "host": ["{{webUrl}}"], "path": ["trips", "{{tripId}}", "itinerary"] },
+            "description": "Manual/visual checks for the itinerary builder screen."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Create stop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Stop id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('stopId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cityId\": {{cityId}},\n  \"startDate\": \"2026-12-05\",\n  \"endDate\": \"2026-12-07\",\n  \"notes\": \"Stop added while testing the itinerary UI.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/stops", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "stops"] },
+            "description": "ItineraryPage → POST /trips/:id/stops."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Reorder stops",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderedIds\": [{{stopId}}]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/stops/reorder", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "stops", "reorder"] },
+            "description": "ItineraryPage drag-and-drop → PUT /trips/:id/stops/reorder with { orderedIds }. NOTE: the current backend expects PATCH with { stopIds } — if this returns 404/400 the UI and API have drifted; that is exactly what this check exists to catch."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Create day",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Day id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('dayId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-12-05\",\n  \"title\": \"Day 1 — Testing\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/days", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "days"] },
+            "description": "ItineraryPage → POST /trips/:id/days."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Add activity to day",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Trip activity id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('tripActivityId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activityId\": {{activityId}},\n  \"startTime\": \"10:00\",\n  \"endTime\": \"12:00\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/days/{{dayId}}/activities", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "days", "{{dayId}}", "activities"] },
+            "description": "ActivityForm (inside a day) → POST /trips/:id/days/:dayId/activities."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Delete stop activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/stops/{{stopId}}/activities/{{tripActivityId}}", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "stops", "{{stopId}}", "activities", "{{tripActivityId}}"] },
+            "description": "ItineraryPage delete action → DELETE /trips/:id/stops/:stopId/activities/:actId. NOTE: the backend route is actually DELETE /api/trip-activities/:id — this request mirrors what the UI sends today; a 404 here flags a real UI↔API mismatch to fix."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 · Cities (/cities)",
+      "description": "Destination explorer — search, country/region filters, sorting and 'add stop' quick action.",
+      "item": [
+        {
+          "name": "Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/cities and verify:');",
+                  "console.log('1) City cards show image, country, cost index and description');",
+                  "console.log('2) Search + country/region filter + sort refetch from the API');",
+                  "console.log('3) Add to trip → loads my trips, POST /trips/:id/stops, success toast');",
+                  "console.log('4) Pagination controls work (page/limit params)');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/cities", "host": ["{{webUrl}}"], "path": ["cities"] },
+            "description": "Manual/visual checks for the cities explorer screen."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Explore cities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Meta + city id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.meta).to.have.property('page');",
+                  "    if (json.data.length > 0) pm.collectionVariables.set('cityId', String(json.data[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cities?page=1&limit=12&sort=popularity",
+              "host": ["{{baseUrl}}"],
+              "path": ["cities"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "12" },
+                { "key": "sort", "value": "popularity" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "region", "value": "Europe", "disabled": true }
+              ]
+            },
+            "description": "CitiesPage → GET /cities with search/countryId/region/sort/page/limit params."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — My trips (for add-stop)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips", "host": ["{{baseUrl}}"], "path": ["trips"] },
+            "description": "CitiesPage 'add to trip' → GET /trips to populate the trip selector, then POST /trips/:id/stops."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07 · Activities (/activities)",
+      "description": "Activity catalog with search, city/type/cost/duration filters and sorting.",
+      "item": [
+        {
+          "name": "Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/activities and verify:');",
+                  "console.log('1) Activity cards show image, type badge, estimated cost and duration');",
+                  "console.log('2) Filters (search, city, type, cost, duration) refetch with query params');",
+                  "console.log('3) Sort dropdown (name, cost, duration) works');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/activities", "host": ["{{webUrl}}"], "path": ["activities"] },
+            "description": "Manual/visual checks for the activities catalog screen."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Browse activities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Activity id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.length > 0) pm.collectionVariables.set('activityId', String(json.data[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/activities?page=1&limit=12&sort=name",
+              "host": ["{{baseUrl}}"],
+              "path": ["activities"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "12" },
+                { "key": "sort", "value": "name" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "cityId", "value": "{{cityId}}", "disabled": true },
+                { "key": "type", "value": "food", "disabled": true },
+                { "key": "maxCost", "value": "5000", "disabled": true }
+              ]
+            },
+            "description": "ActivitiesPage → GET /activities with search/cityId/type/cost/duration/sort params."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "08 · Budget & Expenses (inside trip detail)",
+      "description": "Budget tab of a trip — planned budget, expense list, category totals and daily spend.",
+      "item": [
+        {
+          "name": "Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/trips/{{tripId}} (Budget tab) and verify:');",
+                  "console.log('1) Set budget form (amount + currency) saves');",
+                  "console.log('2) Add expense (category, amount, date) appears in the list instantly');",
+                  "console.log('3) Summary shows planned vs spent and per-category totals');",
+                  "console.log('4) Daily spend view flags over-budget days');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/trips/{{tripId}}", "host": ["{{webUrl}}"], "path": ["trips", "{{tripId}}"] },
+            "description": "Manual/visual checks for the budget tab of the trip detail screen."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Set budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 40000,\n  \"currency\": \"INR\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/budget", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "budget"] },
+            "description": "Budget form → PATCH /trips/:tripId/budget."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Add expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Expense id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('expenseId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"MEAL\",\n  \"amount\": 1200,\n  \"currency\": \"INR\",\n  \"date\": \"2026-12-05\",\n  \"description\": \"Dinner while testing the UI\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/expenses", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "expenses"] },
+            "description": "Add-expense form → POST /trips/:tripId/expenses."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Budget summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/budget", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "budget"] },
+            "description": "Summary panel → GET /trips/:tripId/budget (planned, spent, category totals, over-budget flag)."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Daily budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/budget/daily", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "budget", "daily"] },
+            "description": "Daily view → GET /trips/:tripId/budget/daily."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "09 · Calendar (/calendar)",
+      "description": "FullCalendar view of all trips' activities; month/week/day tabs and trip selector.",
+      "item": [
+        {
+          "name": "Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/calendar and verify:');",
+                  "console.log('1) Trip selector loads (GET /trips)');",
+                  "console.log('2) Calendar renders month/week/day views (FullCalendar)');",
+                  "console.log('3) Scheduled activities appear on their trip dates');",
+                  "console.log('4) Empty state when a trip has no scheduled activities');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/calendar", "host": ["{{webUrl}}"], "path": ["calendar"] },
+            "description": "Manual/visual checks for the calendar screen."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Trips for selector",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips", "host": ["{{baseUrl}}"], "path": ["trips"] },
+            "description": "CalendarPage → GET /trips (then fetches the selected trip's itinerary/calendar data)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "10 · Community (/community)",
+      "description": "Social feed of travel posts — search, sort, create with image and trip link, edit/delete own posts, clone shared trips.",
+      "item": [
+        {
+          "name": "Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/community and verify:');",
+                  "console.log('1) Feed renders with search + sort (latest/oldest/updated) + pagination');",
+                  "console.log('2) Create post (title, content, image URL, optional trip link) appears at top of feed');",
+                  "console.log('3) Edit/delete only on your own posts');",
+                  "console.log('4) Clone on a post with a shared trip → (Copy) trip created (POST /trips/:id/clone)');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/community", "host": ["{{webUrl}}"], "path": ["community"] },
+            "description": "Manual/visual checks for the community feed screen."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Create post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Post id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('postId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Frontend test post\",\n  \"content\": \"Testing the community screen via Postman.\",\n  \"image\": \"https://images.unsplash.com/photo-1502602898657-3e91760cbb34\",\n  \"tripId\": {{tripId}}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/community/posts", "host": ["{{baseUrl}}"], "path": ["community", "posts"] },
+            "description": "CommunityPage composer → POST /community/posts (tripId must be one of your PUBLIC trips)."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — List posts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=latest", "host": ["{{baseUrl}}"], "path": ["community", "posts"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "10" }, { "key": "sort", "value": "latest" }, { "key": "search", "value": "", "disabled": true }] },
+            "description": "CommunityPage feed → GET /community/posts with search/sort/page params."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Update post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Frontend test post (edited)\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/community/posts/{{postId}}", "host": ["{{baseUrl}}"], "path": ["community", "posts", "{{postId}}"] },
+            "description": "Edit dialog → PATCH /community/posts/:postId (owner only)."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Delete post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/community/posts/{{postId}}", "host": ["{{baseUrl}}"], "path": ["community", "posts", "{{postId}}"] },
+            "description": "Delete action → DELETE /community/posts/:postId (owner only). Run LAST in this folder."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "11 · Profile (/profile)",
+      "description": "Edit profile details, upload avatar, change password, delete account.",
+      "item": [
+        {
+          "name": "Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Open {{webUrl}}/profile and verify:');",
+                  "console.log('1) Profile form prefilled from GET /auth/me');",
+                  "console.log('2) Avatar upload (multipart PATCH /auth/profile) updates the header photo');",
+                  "console.log('3) Change password → success toast; wrong current password → error toast');",
+                  "console.log('4) Delete account → confirm dialog → account removed, redirected to /login');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/profile", "host": ["{{webUrl}}"], "path": ["profile"] },
+            "description": "Manual/visual checks for the profile screen."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Current user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('User id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', String(json.data.user.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] },
+            "description": "ProfilePage load → GET /auth/me (authStore.fetchMe)."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Update profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Bio updated from the Postman frontend collection.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/profile", "host": ["{{baseUrl}}"], "path": ["auth", "profile"] },
+            "description": "ProfilePage save → PUT /auth/profile. NOTE: the backend route is PATCH /auth/profile — a 404 here means the UI and API no longer match; that is exactly what this check exists to catch."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "12 · Admin (/admin)",
+      "description": "Admin dashboard — users table, status toggle, analytics charts. Requires the ADMIN role (seeded: admin@globetrotter.com / AdminSecret99!).",
+      "item": [
+        {
+          "name": "Screen Checks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Login as admin@globetrotter.com / AdminSecret99! first.');",
+                  "console.log('Open {{webUrl}}/admin and verify:');",
+                  "console.log('1) Normal user → AdminRoute blocks /admin (redirect/403 UI)');",
+                  "console.log('2) Admin → users table + analytics charts render');",
+                  "console.log('3) Toggle user status fires the status API; deactivate blocks that user\\'s login');",
+                  "console.log('4) Non-admin API calls to /admin/* return 403');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/admin", "host": ["{{webUrl}}"], "path": ["admin"] },
+            "description": "Manual/visual checks for the admin screen (requires an admin session)."
+          },
+          "response": []
+        },
+        {
+          "name": "API Behind Screen — Users + analytics (admin token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('User id captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data.length > 0) pm.collectionVariables.set('userId', String(json.data[0].id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/admin/users?page=1&limit=20", "host": ["{{baseUrl}}"], "path": ["admin", "users"], "query": [{ "key": "page", "value": "1" }, { "key": "limit", "value": "20" }] },
+            "description": "AdminPage load → GET /admin/users (plus /admin/analytics). Uses {{accessToken}} — swap to the admin token for full 200s."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "13 · Guards & Routing (no API)",
+      "description": "Routing-level behaviors that need no API verification but must hold in the browser.",
+      "item": [
+        {
+          "name": "Route Guard Checklist",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "console.log('Verify in the browser:');",
+                  "console.log('1) /  → redirects to /dashboard');",
+                  "console.log('2) Protected pages without token → /login');",
+                  "console.log('3) Unknown URL (/anything-random) → /dashboard');",
+                  "console.log('4) 401 from any API (expired token) → localStorage cleared → /login');",
+                  "console.log('5) /login and /register with a valid token → /dashboard (PublicRoute)');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{webUrl}}/", "host": ["{{webUrl}}"], "path": [""] },
+            "description": "Checklist for ProtectedRoute / PublicRoute / AdminRoute and the catch-all redirect."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "14 · Page E2E Flow",
+      "description": "The full user journey across screens. Run top-to-bottom — each step feeds the next (ids are auto-captured).",
+      "item": [
+        {
+          "name": "Step 1 — Register via RegisterPage",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Journey\",\n  \"lastName\": \"Tester\",\n  \"username\": \"journey_{{$timestamp}}\",\n  \"email\": \"journey_{{$timestamp}}@globetrotter.test\",\n  \"password\": \"Journey@12345\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "description": "RegisterPage → new account (role USER)."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 2 — Login via LoginPage",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('token captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', json.data.accessToken);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@globetrotter.com\",\n  \"password\": \"Demo@123456\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "description": "LoginPage → token in localStorage → /dashboard."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 3 — Dashboard loads data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips?summary=true", "host": ["{{baseUrl}}"], "path": ["trips"], "query": [{ "key": "summary", "value": "true" }] },
+            "description": "DashboardPage → trip summaries."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 4 — Create trip from /trips/create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('tripId captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('tripId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Journey Trip\",\n  \"description\": \"E2E journey across the frontend screens.\",\n  \"startDate\": \"2026-12-05\",\n  \"endDate\": \"2026-12-10\",\n  \"visibility\": \"PUBLIC\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips", "host": ["{{baseUrl}}"], "path": ["trips"] },
+            "description": "CreateTripPage → new trip (PUBLIC so it can be shared to the community later)."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 5 — Add stop from /cities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('stopId captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('stopId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cityId\": {{cityId}},\n  \"startDate\": \"2026-12-05\",\n  \"endDate\": \"2026-12-08\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/stops", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "stops"] },
+            "description": "CitiesPage 'add to trip' → POST /trips/:id/stops."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 6 — Itinerary: create day + activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('dayId captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('dayId', String(json.data.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-12-05\",\n  \"title\": \"Day 1 — Journey\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/days", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "days"] },
+            "description": "ItineraryPage → POST /trips/:id/days. Follow with Add Activity from folder 05 if {{activityId}} is set."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 7 — Budget: set budget + expense",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 30000,\n  \"currency\": \"INR\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/budget", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "budget"] },
+            "description": "Budget tab → PATCH /trips/:tripId/budget. Add an expense from folder 08 afterwards."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 8 — Community: share + post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('shareSlug captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('shareSlug', json.data.shareSlug);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/trips/{{tripId}}/share", "host": ["{{baseUrl}}"], "path": ["trips", "{{tripId}}", "share"] },
+            "description": "TripDetailPage share action → POST /trips/:tripId/share → trip becomes PUBLIC with a share URL."
+          },
+          "response": []
+        },
+        {
+          "name": "Step 9 — Profile: fetch me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('userId captured', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('userId', String(json.data.user.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] },
+            "description": "ProfilePage → GET /auth/me."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
