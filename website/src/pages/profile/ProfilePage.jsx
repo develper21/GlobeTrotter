@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { User, Mail, Phone, MapPin, Globe, Edit2, Trash2, Camera, Lock, Eye, EyeOff, Map, Sparkles, Shield, Key } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import api from '../../lib/api';
