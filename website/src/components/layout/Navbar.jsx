@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import useAuthStore from '../../store/authStore';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 import NotificationPopup from '../common/NotificationPopup';
