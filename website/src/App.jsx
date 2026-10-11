@@ -31,7 +31,7 @@ function App() {
   const completeLaunchIntro = () => {
     try {
       sessionStorage.setItem('gt_has_seen_intro', 'true');
-    } catch {}
+    } catch { /* sessionStorage unavailable */ }
     setShowLaunchIntro(false);
   };
 
