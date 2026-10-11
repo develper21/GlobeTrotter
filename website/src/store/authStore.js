@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import api from '../lib/api';
 
-const useAuthStore = create((set, get) => ({
+const useAuthStore = create((set) => ({
   user: (() => {
     try {
       return JSON.parse(localStorage.getItem('user') || 'null');
@@ -49,7 +49,7 @@ const useAuthStore = create((set, get) => ({
   },
 
   logout: async () => {
-    try { await api.post('/auth/logout'); } catch {}
+    try { await api.post('/auth/logout'); } catch { /* ignore logout API errors */ }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     set({ user: null, token: null });
@@ -76,7 +76,7 @@ const useAuthStore = create((set, get) => ({
       const { data } = await api.get('/auth/me');
       localStorage.setItem('user', JSON.stringify(data.user));
       set({ user: data.user });
-    } catch {}
+    } catch { /* /auth/me best-effort; ignore */ }
   },
 
   setUser: (user) => set({ user }),
