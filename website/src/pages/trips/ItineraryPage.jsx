@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -138,7 +138,7 @@ export default function ItineraryPage() {
       return;
     }
     try {
-      const { data } = await api.post(`/trips/${id}/stops`, newStop);
+      await api.post(`/trips/${id}/stops`, newStop);
       await loadTrip();
       setNewStop({ city: '', startDate: '', endDate: '' });
       setShowStopForm(false);
@@ -149,7 +149,7 @@ export default function ItineraryPage() {
   const handleDeleteStop = async (stopId) => {
     if (!confirm('Remove this stop from itinerary?')) return;
     try {
-      const { data } = await api.delete(`/trips/${id}/stops/${stopId}`);
+      await api.delete(`/trips/${id}/stops/${stopId}`);
       await loadTrip();
       toast.success('Stop removed');
     } catch { toast.error('Failed to remove stop'); }
