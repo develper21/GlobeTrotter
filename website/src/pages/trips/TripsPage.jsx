@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Search, Plus, Map, Sparkles, Filter, Calendar } from 'lucide-react';
 import api from '../../lib/api';
 import TripCard from '../../components/trips/TripCard';
@@ -15,8 +15,7 @@ const TABS = [
   { key: 'completed', label: 'Completed' },
 ];
 
-export default function TripsPage() {
-  const navigate = useNavigate();
+export default function TripsPage() {  const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -50,7 +49,8 @@ export default function TripsPage() {
   };
 
   useEffect(() => {
-    fetchTrips();
+    const id = setTimeout(fetchTrips, 0);
+    return () => clearTimeout(id);
   }, [activeTab, search]);
 
   const handleDelete = (id) => setTrips((prev) => prev.filter((t) => (t.id || t._id) !== id));
