@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ArrowLeft, MapPin, Calendar, DollarSign, Globe, Lock, Heart, MessageSquare, Share2, Eye, Sparkles, Copy } from 'lucide-react';
 import api from '../../lib/api';
 import useAuthStore from '../../store/authStore';
