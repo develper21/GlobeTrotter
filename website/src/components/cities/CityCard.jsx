@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { MapPin, DollarSign, Star, Plus, Sparkles, Compass } from 'lucide-react';
 import './CityCard.css';
 
