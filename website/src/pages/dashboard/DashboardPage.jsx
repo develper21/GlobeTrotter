@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Plus, Map, MapPin, TrendingUp, Clock, Users, Compass, ArrowRight, Star, Globe, Sparkles, Calendar, Search } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import api from '../../lib/api';
