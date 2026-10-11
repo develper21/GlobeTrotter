@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Search, Users, Heart, MessageSquare, Globe2, Copy, Sparkles, MapPin, Calendar, ArrowRight } from 'lucide-react';
 import api from '../../lib/api';
 import { format } from 'date-fns';
@@ -36,7 +35,10 @@ export default function CommunityPage() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchTrips(); }, [search, page]);
+  useEffect(() => {
+    const id = setTimeout(fetchTrips, 0);
+    return () => clearTimeout(id);
+  }, [search, page]);
 
   const handleCloneTrip = async (tripId) => {
     if (!user) {
