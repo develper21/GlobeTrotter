@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Search, Compass, Sparkles, Clock, DollarSign, MapPin, Filter } from 'lucide-react';
 import api from '../../lib/api';
 import { SkeletonCard } from '../../components/common/Loader';
@@ -12,7 +12,10 @@ export default function ActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
-  const [cityFilter, setCityFilter] = useState('');
+  // Prefill city filter if the user navigated here with ?city=...
+  const [cityFilter] = useState(
+    () => new URLSearchParams(window.location.search).get('city') || ''
+  );
   const [total, setTotal] = useState(0);
   const [error, setError] = useState(null);
 
