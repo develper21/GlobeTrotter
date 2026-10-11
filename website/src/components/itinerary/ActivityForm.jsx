@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Plus, X, Check } from 'lucide-react';
 import api from '../../lib/api';
 import { ButtonSpinner } from '../common/Loader';
