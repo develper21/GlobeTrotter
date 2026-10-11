@@ -3,12 +3,6 @@ import { Compass, Globe, Plane } from 'lucide-react';
 import './Loader.css';
 
 export const GlobeSpinner = ({ size = 'md', text = 'Loading...' }) => {
-  const sizeMap = {
-    sm: '24px',
-    md: '40px',
-    lg: '64px',
-    xl: '96px',
-  };
 
   return (
     <div className={`globe-spinner-container size-${size}`}>
