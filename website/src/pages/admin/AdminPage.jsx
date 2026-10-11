@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { BarChart3, Users, Map, Globe, TrendingUp, AlertTriangle, Trash2, ToggleLeft, ToggleRight, Database, Sparkles, Shield } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../../lib/api';
@@ -51,7 +50,7 @@ export default function AdminPage() {
   const handleSeedData = async () => {
     setSeeding(true);
     try {
-      const { data } = await api.post('/admin/seed');
+      await api.post('/admin/seed');
       toast.success(`Successfully seeded destination database!`);
     } catch { toast.error('Seeding process failed'); }
     finally { setSeeding(false); }
