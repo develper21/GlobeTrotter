@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { MapPin, Calendar, DollarSign, Edit, Trash2, Globe, Lock, Clock, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import api from '../../lib/api';
@@ -24,7 +23,7 @@ export default function TripCard({ trip, onDelete }) {
       await api.delete(`/trips/${trip.id || trip._id}`);
       toast.success('Trip deleted successfully');
       onDelete?.(trip.id || trip._id);
-    } catch (err) {
+    } catch {
       toast.error('Failed to delete trip');
     }
   };
