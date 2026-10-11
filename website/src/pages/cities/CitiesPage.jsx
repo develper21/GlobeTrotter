@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Search, Globe, Compass, Sparkles, MapPin, X, Check } from 'lucide-react';
 import api from '../../lib/api';
 import CityCard from '../../components/cities/CityCard';
@@ -63,14 +62,14 @@ export default function CitiesPage() {
       return;
     }
     try {
-      const { data } = await api.post(`/trips/${selectedTripId}/stops`, {
+      await api.post(`/trips/${selectedTripId}/stops`, {
         city: selectedCity.name,
         startDate: stopDates.startDate,
         endDate: stopDates.endDate,
       });
       toast.success(`Added ${selectedCity.name} to your trip!`);
       setShowAddToTripModal(false);
-    } catch (err) {
+    } catch {
       toast.error('Failed to add city to trip');
     }
   };
@@ -128,24 +127,19 @@ export default function CitiesPage() {
           <p>Try searching for a different city or changing the region filter.</p>
         </div>
       ) : (
-        <motion.div
-          className="cities-grid-page"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ staggerChildren: 0.04 }}
-        >
-          {cities.map((city, i) => (
-            <motion.div key={city.id || city._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+        <div className="cities-grid-page">
+          {cities.map((city) => (
+            <div key={city.id || city._id}>
               <CityCard city={city} showAddToTrip={userTrips.length > 0} onAddToTrip={handleAddToTrip} />
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       )}
 
       {/* Add to Trip Modal */}
       {showAddToTripModal && (
         <div className="modal-overlay" onClick={() => setShowAddToTripModal(false)}>
-          <motion.div className="modal-content glass-card" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add {selectedCity?.name} to Your Trip</h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowAddToTripModal(false)}><X size={18} /></button>
@@ -175,7 +169,7 @@ export default function CitiesPage() {
               <button className="btn btn-ghost" onClick={() => setShowAddToTripModal(false)}><X size={16} /> Cancel</button>
               <button className="btn btn-primary" onClick={handleAddStop}><Check size={16} /> Add to Trip</button>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
     </div>
