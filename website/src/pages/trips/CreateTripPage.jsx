@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, Calendar, Globe, Lock, Tag, FileText, Image, Sparkles } from 'lucide-react';
 import api from '../../lib/api';
 import { ButtonSpinner } from '../../components/common/Loader';
